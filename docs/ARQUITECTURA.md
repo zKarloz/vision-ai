@@ -171,3 +171,13 @@ El panel remoto no almacena claves privadas en el frontend.
 `ThemeProvider → AuthProvider → AuthenticatedProduct` comprueba sesión real con Supabase Auth y membresía RLS. Solo con rol administrador se montan `CameraRegistryProvider → IncidentCenterProvider → ReportCenterProvider → RemoteSyncProvider` y las rutas del producto. La vista pública `/login` no inicializa cámaras/ONNX, ni consulta incidentes o reportes locales. El módulo de Reportes solo solicita consentimiento independiente para sincronizar datos reales.
 
 La validación de rutas y botones en React **no reemplaza** el aislamiento RLS ni el control de operaciones en servidor. Antes de habilitar usuarios múltiples, migrar/aislar `localStorage` por propietario, diseñar permisos RBAC de módulos y acciones, y probar denegaciones con usuarios autenticados diferentes.
+
+## Etapa 7 · Módulo de calidad y límites de validación (v1.9.0)
+
+La ruta `/guia` está detrás de `AuthenticatedProduct`, exactamente como el dashboard y Monitoreo. No introduce credenciales nuevas ni permite omitir `AuthProvider`/RLS. `QualityPage` consume únicamente snapshots ya existentes de `IncidentCenter`, `ReportCenter` y `RemoteSyncProvider`. `application/qualityGuide.ts` define un guion inmutable, y su progreso vive solo en memoria del componente; **marcar una casilla no altera registros, no dispara sirenas, no simula objetos ni ejecuta servicios remotos**.
+
+`tests/integratedAcceptanceStage7.test.ts` realiza pruebas de integración sobre módulos reales de dominio/aplicación, inyectando eventos que cumplen el contrato de `Detection`. Esto valida transiciones y reportes, **no precisión estadística de inferencia ONNX**. El modelo para clase `person` continúa analizándose únicamente en Monitoreo. No se añade nuevo backend ni se modifica el plan Cron existente.
+
+Accesibilidad: enlace al contenido principal, foco visible, menú móvil con Tab contenido/Escape, navegación responsiva, tablas con `caption` y región desplazable accesible y preferencia de movimiento reducido. Requiere comprobación humana adicional en Chrome con resolución reducida y lectores de pantalla para cerrar la etapa.
+
+Datos y permisos: persistencia local por navegador; sincronización remota solo con aceptación explícita y usuario autorizado. **No habilitar otros roles** hasta aislar el almacenamiento local y probar permisos por acción, no solo visibilidad de rutas. Supabase Cron y Resend ya se configuraron, con una entrega manual validada; la ejecución programada debe verificarse todavía para cerrar etapa 6.

@@ -41,6 +41,6 @@ export function RemoteConnectionPanel() {
       </div>}
     </div>
     {remote.error && <p role="alert" className="mt-3 text-xs text-[var(--danger)]">{remote.error}</p>}
-    <p className="mt-3 text-[11px] text-[var(--muted)]">El envío automático requiere configurar Resend y Cron en Supabase; iniciar sesión no activa correos.</p>
+    <p className="mt-3 text-[11px] text-[var(--muted)]">Cron y Resend se administran desde Supabase. Iniciar sesión no activa envíos ni demuestra entrega al buzón.</p>
   </Panel>;
 }

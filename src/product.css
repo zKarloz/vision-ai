@@ -78,5 +78,10 @@
 html { min-height: 100%; background: var(--page); }
 body { margin: 0; min-height: 100vh; }
 button, input, select, textarea { font: inherit; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [role="region"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 ::selection { background: var(--notice-border); }
+
+/* Respeta la preferencia de reducir animaciones para las transiciones UI. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

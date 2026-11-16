@@ -326,3 +326,60 @@ El usuario confirmó **124/124 pruebas, TypeScript, build y los seis casos funci
 - No se modifica el modelo ONNX ni la automatización Cron/Resend; el envío real permanece pendiente de comprobación.
 
 **Regresión esperada:** 141 pruebas anteriores + 6 pruebas nuevas de política de acceso = **147 pruebas**. Ejecutar `npm run test && npm run typecheck && npm run build` en Windows. Comprobar con Chrome la redirección a `/login`, restauración de sesión, bloqueo al cerrar sesión, y funcionamiento de Monitoreo/Reportes tras acceder.
+
+---
+
+## Etapa 6 · Evidencia real de despliegue y correo (16/11/2026)
+
+El usuario confirmó después de la v1.8.1:
+
+- Proyecto subido a **GitHub**, publicado mediante **Vercel**, con login Supabase e inferencia YOLO en el navegador funcionando.
+- Migraciones, membresía `administrador`, RLS y sincronización de incidentes ejecutadas satisfactoriamente en su Supabase.
+- Edge Function `vision-daily-report` desplegada y secretos de Resend configurados en servidor.
+- Envío real manual de informe diario: `net._http_response.status_code = 200`, respuesta `acceptedByProvider: true` y `total: 15`, trabajo `vision-daily-2026-11-15-admin` con `status = sent`, un intento, sin errores; **el usuario confirmó recepción del correo**.
+- Se activaron las tareas Cron `vision-ai-daily-report-lima` (`5,35 5 * * *` UTC) y `vision-ai-daily-report-lima-retry` (`5 6 * * *` UTC): equivalen a 00:05/00:35 y 01:05 hora de Lima. Las dos figuraban con `active = true`.
+- Al verificar `cron.job_run_details` inmediatamente después de programar, aún no existían ejecuciones: `Success. No rows returned`.
+
+**Pendiente para cierre definitivo de etapa 6:** evidencia de al menos una ejecución automática de Cron, su respuesta HTTP y el envío correspondiente (con recepción o trazabilidad del proveedor), asegurando que los reintentos no lo dupliquen. Cron no ejecuta ni mantiene abierto YOLO cuando el navegador está cerrado.
+
+## Etapa 7 · Primer avance v1.9.0 — Calidad, responsive y guía (16/11/2026)
+
+**Criterio del PDF rector, sección 17:** «Pruebas integrales, accesibilidad, responsive, demo guiada», con salida «Sin errores críticos». Se conserva el cambio anterior: **YOLO real** es el motor de detección; los datos sintéticos de pruebas ejercitan su contrato, no fabrican resultados del modelo.
+
+### Implementado
+
+- Ruta protegida **`/guia`**, accesible desde la barra lateral. Nueve pasos manuales cubren validación de configuración, entrada/salida, reconocimiento, reporte, sincronización y Cron. Incluye resultados esperados, navegación a módulos y progreso; las casillas son **manuales y temporales**, no equivalen a pruebas automatizadas.
+- Cobertura de flujo completo desde **detecciones de contrato YOLO → VisualZoneMonitor → VisualIncidentCoordinator → IncidentCenter → ReportCenter → exportación y payload remoto**, con seguimiento perdido, rebote, seguridad de origen, cierre manual vs. automático, auditoría, persistencia e idempotencia.
+- Accesibilidad mejorada: **skip link**, enfoque del menú móvil, contención de Tab y salida con `Escape`, ocultación del menú fuera de pantalla, etiquetas de tabla, scroll accesible, respeto a `prefers-reduced-motion` y estados de progreso con `aria-live`/`progressbar`.
+- Actualización de textos obsoletos de inicio y Reportes que se referían a Supabase como inexistente. **No se afirma ejecución automática de Cron hasta verla.**
+- **Sin cambios** en lógica de YOLO/ONNX, cámara 3D, Edge Function, migraciones, credenciales o programación SQL. Se conserva la personalización de `vercel.json` y `.gitignore` realizada por el usuario.
+
+### Verificación técnica disponible
+
+- 13 nuevas pruebas en `tests/integratedAcceptanceStage7.test.ts` y `tests/qualityGuideStage7.test.ts`, ejecutadas en una comprobación Node aislada del núcleo sin depender de npm.
+- **Objetivo en Windows:** las 147 pruebas previstas para v1.8.1 más 13 = **160**. `npm run test && npm run typecheck && npm run build` debe ejecutarse en VSCode y validarse en Vercel.
+- La comprobación aislada no equivale a un resultado positivo de Vitest, React ni build de Vite; no se afirma haber probado WebGPU, lectores de pantalla o varios dispositivos aquí.
+
+### Pruebas de aceptación que debe hacer el usuario
+
+1. Confirmar 160 pruebas y build sin errores; comprobar que el nuevo `/guia` se abre tras autenticar y no aparece sin sesión.
+2. **Responsive:** probar viewport 375 px, 768 px y 1280 px, ambos temas y navegadores móviles si están disponibles; comprobar tablas desplazables, sidebar, cámara y paneles sin desbordes críticos.
+3. **Teclado y accesibilidad:** navegar con Tab/Shift+Tab, abrir menú móvil, cerrarlo con Escape, verificar foco visible y salto a contenido. Revisar contraste y utilizar un lector de pantalla si es posible.
+4. **Flujo completo:** cuenta administradora → cámara fija/video → zona → YOLO persona → alarma → reconocimiento → salida confirmada/cierre → reportes → sincronización. Repetir un paso y verificar ausencia de duplicados.
+5. **Errores/robustez:** cargar configuración inválida; simular señal ausente; recargar sesión; perder conexión Supabase y recuperar; sin crear falsos cierres.
+6. **Automatización:** esperar la primera ejecución programada; consultar Cron, respuesta de `pg_net`, trabajo e inbox de Resend; verificar una sola entrega por día.
+
+### Brechas conocidas que no deben ocultarse
+
+- El criterio de **cono detectado, precaución ámbar sin sirena** pertenece al PDF, pero **no está implementado** por el modelo COCO actual. Requiere datos etiquetados y modelo especializado; no simular detección como si fuese YOLO real.
+- La validación con lectores de pantalla, auditoría de contraste WCAG y pruebas cross-browser automatizadas aún no están certificadas.
+- Pruebas de precisión cuantitativa de IA sobre datos anotados y flujo WebSocket/Python pertenecen a la etapa 8 si se decide ese enfoque. Las 13 pruebas nuevas no evalúan exactitud visual del modelo.
+- Antes de abrir RBAC a otros usuarios: aislamiento o migración de datos locales y reglas servidor detalladas, con pruebas de seguridad multiusuario.
+
+**Estado de etapa 7:** avance, **no cerrada** hasta aceptación integral y corrección de errores críticos encontrados.
+
+### Integración continua en GitHub (primer avance de etapa 7)
+
+Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga del modelo YOLO con el hash verificado por el script del proyecto, Vitest, TypeScript y Vite Build con Node 22 ante push/PR a `main`, además de activación manual. No necesita secretos del frontend, Resend o Supabase y **no despliega por sí sola**; Vercel conserva el despliegue de la rama.
+
+**Antes de hacer push**, ejecutar `npm install` en el proyecto actualizado para que el `package-lock.json` del repositorio refleje la versión de `package.json` (sin paquetes nuevos). Un `npm ci` sin lockfile correcto fallaría y no implica fallo de la lógica del proyecto. La descarga del modelo requiere acceso a su origen externo, por lo que una indisponibilidad de la red puede producir una ejecución roja aunque el código no haya cambiado. Verificar en GitHub → Actions el resultado real, no afirmar que CI está verde sin evidencia.

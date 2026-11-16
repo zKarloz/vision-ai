@@ -14,7 +14,7 @@ import { RemoteConnectionPanel } from './RemoteConnectionPanel';
 
 const formatDate = (date: string) => new Date(date).toLocaleString('es-PE', { timeZone: 'America/Lima' });
 
-/** Bandeja de informes locales. Los correos reales solo se habilitarán al conectar Supabase. */
+/** Bandeja local: el correo programado corre en Supabase, no en el navegador. */
 export function ReportsPage() {
   const { state: incidentState } = useIncidentCenter();
   const { center, state } = useReportCenter();
@@ -58,7 +58,7 @@ export function ReportsPage() {
 
   return <>
     <PageHeader eyebrow="Etapa 6 · Automatización" title="Reportes y bandeja"
-      description="Reportes locales PDF/CSV/JSON y sincronización remota opcional de incidentes YOLO. El correo necesita activación y validación del servidor." />
+      description="Reportes PDF/CSV/JSON locales y sincronización opcional. Los correos diarios se ejecutan en Supabase; verifica sus trabajos y la recepción por separado." />
     <section className="mb-5 grid gap-3 md:grid-cols-3" aria-label="Estadísticas de reportes">
       <Panel className="p-5"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><Archive size={16}/> Reportes archivados</p><p className="mt-2 text-2xl font-bold tabular-nums">{state.reports.length}</p></Panel>
       <Panel className="p-5"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><ShieldCheck size={16}/> Por incidente</p><p className="mt-2 text-2xl font-bold tabular-nums">{incidentCount}</p></Panel>
@@ -75,8 +75,8 @@ export function ReportsPage() {
       </Panel>
       <Panel className="p-5">
         <h2 className="flex items-center gap-2 text-sm font-bold"><Mail size={17}/> Envío al administrador</h2>
-        <p className="mt-2 text-xs leading-5 text-[var(--muted)]">El envío diario a las 00:05 de Lima se ejecutará desde Supabase Cron cuando el administrador complete su configuración y las pruebas de Resend.</p>
-        <div className="mt-4"><StatusBadge tone="warning">Activación remota pendiente</StatusBadge></div>
+        <p className="mt-2 text-xs leading-5 text-[var(--muted)]">El envío diario a las 00:05 de Lima se administra en Supabase Cron. La bandeja local no puede asegurar que un trabajo remoto se ejecutó: revisa la auditoría del servidor y el buzón.</p>
+        <div className="mt-4"><StatusBadge tone="warning">Verificar ejecución de Cron</StatusBadge></div>
         <p className="mt-3 text-xs text-[var(--muted)]">La bandeja no afirma entregas. Al cerrar la pestaña no hay planificación local continua.</p>
       </Panel>
     </div>
@@ -87,10 +87,10 @@ export function ReportsPage() {
           <option value="all">Todos</option><option value="incident">Por incidente</option><option value="daily">Diarios</option>
         </select></label>
       </div>
-      <DataTable rows={reports} columns={columns} getRowKey={row => row.key} pageSize={6} emptyMessage="Aún no hay reportes. Cierra un incidente YOLO o genera el resumen diario."/>
+      <DataTable accessibleName="Bandeja de reportes" rows={reports} columns={columns} getRowKey={row => row.key} pageSize={6} emptyMessage="Aún no hay reportes. Cierra un incidente YOLO o genera el resumen diario."/>
     </Panel>
     <Panel className="overflow-hidden"><div className="p-5"><h2 className="text-sm font-bold">Auditoría de reportes</h2></div>
-      <DataTable rows={state.audit} columns={auditColumns} getRowKey={row => String(row.id)} pageSize={6} emptyMessage="Todavía no se han generado o descargado reportes."/>
+      <DataTable accessibleName="Auditoría de reportes" rows={state.audit} columns={auditColumns} getRowKey={row => String(row.id)} pageSize={6} emptyMessage="Todavía no se han generado o descargado reportes."/>
     </Panel>
     <p className="mt-4 text-xs text-[var(--muted)]">Persistencia: {state.storageOk ? 'localStorage del navegador' : 'solo memoria, almacenamiento no disponible'}. Sin imágenes ni video; reportes y auditoría únicamente con datos estructurados.</p>
   </>;

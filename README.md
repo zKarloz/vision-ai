@@ -1,88 +1,49 @@
-# VISION AI — Etapa 6: acceso obligatorio y conexión remota · v1.8.1
+# VISION AI · Etapa 7 — Calidad y pruebas integrales · v1.9.0
 
-Plataforma académica de monitoreo visual con **YOLOv8n real** (ONNX Runtime Web + Web Worker). Las cámaras 3D comparten un único mundo Three.js, y las fuentes MP4/WebM y webcam también permiten inferencia real sobre fotogramas. Los personajes 3D son sintéticos, **pero su detección se realiza sobre píxeles**, no mediante sus posiciones internas.
+Sistema académico de monitoreo visual con **YOLOv8n real** en ONNX Runtime Web y Web Worker, un mundo industrial **Three.js** compartido por cámaras virtuales, fuentes de video/webcam, zonas restringidas, alarmas, auditoría y reportes. La aplicación está desplegada en Vercel y utiliza Supabase Auth/RLS para el acceso administrador. El motor observa **píxeles reales** del visor/video: las posiciones internas de la escena 3D no sustituyen las detecciones de YOLO.
 
-## Instalar en VSCode / Git Bash
+**Etapa 6:** el usuario verificó un correo real enviado por Resend (15 incidentes) y activó dos tareas Supabase Cron. Al preparar v1.9.0, todavía **falta comprobar la primera ejecución programada**: el estado `sent` del envío manual no prueba que se haya ejecutado Cron. No cambiamos funciones, SQL ni secretos en esta versión.
+
+## Inicio rápido en VSCode / Git Bash
 
 ```bash
 npm install
-npm run model:download
 npm run test && npm run typecheck && npm run build
 npm run dev
 ```
 
-Abre `http://127.0.0.1:5173/`: se redirige a `/login` hasta iniciar sesión como administrador. Si actualizas desde v1.6.0, aplica el ZIP de actualización sobre la raíz del proyecto y conserva `node_modules/`, `public/models/` y la configuración local. Detén Vite con `Ctrl+C` antes de reemplazar archivos. Si el modelo ONNX ya está descargado, no necesitas repetir su descarga.
+Si partes de un clon sin modelo, ejecuta también `npm run model:download`. En Vercel, el Build Command validado por el usuario es `npm run model:download && npm run build`. El modelo ONNX y los binarios de ONNX Runtime no se deben subir a GitHub. Las variables de frontend son `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`; **nunca** pongas `sb_secret_*` o `RESEND_API_KEY` en Vercel o en un archivo `VITE_*`.
 
-## Etapa 5: prueba guiada de alarmas
+**Actualización desde v1.8.1:** extrae el ZIP *Actualización* sobre la raíz y reemplaza los archivos. **No reemplaces tu `vercel.json`, `.gitignore`, `.env.local`, `package-lock.json` ni los modelos/recursos descargados.** Como cambió la versión en `package.json` sin nuevas dependencias, ejecuta `npm install` para actualizar el `package-lock.json` local antes de hacer commit. Después sube los cambios a GitHub; Vercel volverá a compilar.
 
-1. En **Monitoreo**, pulsa **Activar alarmas sonoras**. Chrome sólo permite iniciar Web Audio tras esta interacción; después de cada recarga se requiere habilitarlo nuevamente.
-2. Selecciona una cámara fija con una zona restringida calibrada. Activa YOLO real con WebGPU (o WASM si no está disponible). Usa un video con una persona que entre y salga, o CAM-02 en el mundo 3D.
-3. Cuando el tracker confirme la intrusión según la regla, aparecerá un incidente real YOLO y una señal visual persistente. La sirena se reproduce sólo si el audio fue habilitado.
-4. Pulsa **Reconocer aquí** en Monitoreo e introduce un nombre de supervisor *de prueba*. Se silencia ese incidente, pero **la inferencia no se detiene y el incidente no se cierra**. Si quedan otros incidentes no reconocidos, la sirena continúa.
-5. Tras una **salida visual confirmada**, el incidente se cierra automáticamente. Si se pierde el tracking o la señal, no se inventa una salida y el incidente queda pendiente de revisión.
-6. En **Incidentes**, revisa el historial y la auditoría con filtros y paginación. Se puede reconocer y, después del reconocimiento, registrar un **cierre manual con nota de al menos 10 caracteres**, distinguible de un cierre observado por YOLO.
-7. Recarga la aplicación y vuelve a Incidentes: los metadatos del historial se restauran de `localStorage`, si el navegador lo permite. Puedes exportar los metadatos como JSON. No se guardan imágenes, clips ni datos biométricos.
+## Novedades de la etapa 7
 
-Los incidentes abiertos que permanezcan **60 segundos sin reconocer** se marcan como `escalated` y pasan a severidad crítica si eran de severidad alta. El sonido está activado por *un clic del usuario*, no por ese temporizador.
+- **`/guia`:** guion de aceptación con nueve verificaciones manuales: login, configuración, cámara, YOLO, alarma, cierre, reportes, sincronización/Cron y responsive. Casillas voluntarias que no simulan eventos ni se almacenan.
+- **CI en GitHub Actions:** `/.github/workflows/calidad.yml` ejecuta npm ci, descarga el modelo verificado, pruebas, TypeScript y build en push/PR a `main` (sujeto a los límites gratuitos del repositorio).
+- **Pruebas de integración:** contratos de detecciones → tracking → reglas → incidentes → reconocimiento → cierre → PDF/CSV y serialización remota, con regresiones de pérdida de seguimiento, rebotes e idempotencia. No equivalen a evaluar precisión de YOLO sobre un conjunto etiquetado.
+- **Accesibilidad:** enlace «Saltar al contenido principal», menú móvil navegable con teclado y cierre con `Escape`, foco visible, tablas con nombre accesible, regiones desplazables por teclado y reducción de animaciones si el sistema lo solicita.
+- **Información actualizada:** panel principal y Reportes ya no presentan el login/Supabase como no implementados. La web no certifica la entrega del correo: se contrasta con Supabase y el buzón.
 
-## Cámaras y fuentes compatibles
+## Pruebas de aceptación en Chrome
 
-- **Cámara virtual fija (predeterminada):** crea una perspectiva desde Cámaras con el editor visual. Dibuja el polígono restringido en su captura RGB. CAM-01 y CAM-02 son perspectivas originales; el barrido permanece opcional.
-- **Barrido horizontal:** detecta personas con YOLO, pero **suspende la evaluación de polígonos fijos** durante el movimiento.
-- **MP4/WebM/Ogg en bucle:** archivo local hasta 150 MB, seleccionado cada vez que se abre esa fuente. El archivo no se sube ni persiste.
-- **Webcam:** requiere permiso del navegador; funciona con dispositivos físicos o webcams virtuales (por ejemplo, OBS). Los tracks y el Worker se liberan al desconectar.
-- **Multicámara 3D:** turnos alternados sobre un único Worker; más cámaras reducen los FPS de análisis por cámara. Las fuentes webcam y MP4 son individuales cuando están seleccionadas.
+1. Ejecuta `npm run test && npm run typecheck && npm run build`. **Esperamos 160 pruebas:** 147 esperadas para v1.8.1 + 13 nuevas; confirma el número en tu equipo.
+2. Entra a la URL de Vercel. Comprueba acceso con administrador, redirección de sesión cerrada y navegación a `/guia` sin 404 al refrescar.
+3. Visita **Guía de pruebas**. Marca los pasos **solo después** de realizarlos sobre el sistema; comprueba las variantes de 375, 768 y 1280 px y navega con Tab, Shift+Tab, Enter y Escape.
+4. Valida el flujo con video real de una persona que ingrese y salga de una zona restringida: entrada confirmada, alarma, reconocimiento, cierre YOLO, reporte PDF/CSV/JSON, sin duplicados.
+5. Comprueba la sincronización autorizada con Supabase. Para el cierre de etapa 6, registra evidencia de `cron.job_run_details`, `vision_report_jobs` y correo recibido después del horario real programado.
 
-## Arquitectura y límites honestos
+## Limitaciones científicas y de seguridad
 
-- Detección `person` real con YOLO; conos, cascos y chalecos **aún no están entrenados ni detectados** por este modelo. Las etiquetas verde/rojo/gris describen la zona del punto inferior de la caja, y la apertura requiere confirmación temporal.
-- Un **centro de incidentes compartido** mantiene estados, auditoría y alarmas entre rutas. Los cambios se publican mediante suscripción local; `localStorage` conserva hasta 300 incidentes y 1200 entradas de auditoría. **No es sincronización multiusuario ni una base de datos servidor.** Si el almacenamiento está bloqueado, la interfaz lo advierte y los eventos quedan solo en memoria.
-- La entrada de la plataforma usa Supabase Auth y una membresía RLS de administrador. **Todavía no existe RBAC por módulos** ni identidad verificada para el nombre escrito en un reconocimiento manual; esa atribución sigue siendo académica. Se deben revisar retención, permisos de servidor y trazabilidad antes de producción.
-- El monitoreo YOLO **se pausa cuando la pestaña está oculta** y termina al abandonar Monitoreo. Los incidentes ya abiertos permanecen en el historial; no se afirma vigilancia 24/7. Los reportes locales de la etapa 6 ya están implementados; **el envío de correo desde servidor todavía requiere conexión remota y credenciales privadas**.
-- Aún no hay soporte RTSP/IP ni backend FastAPI, sin alterar la estructura preparada para futuros adaptadores.
+- El YOLO preentrenado en COCO reconoce **personas**, pero no garantiza reconocer **conos, cascos ni chalecos**. El paso de precaución por cono del documento rector es una brecha pendiente hasta disponer de un modelo específico.
+- YOLO solo funciona mientras la pestaña de Monitoreo está abierta/activa; **no** es vigilancia 24/7. El servidor sí puede enviar reportes de incidentes **ya sincronizados** con el navegador cerrado.
+- El único rol habilitado para ingresar a la web es `administrador`. La UI no implementa aún RBAC por módulo; el acceso remoto se protege con Supabase RLS.
+- Los historiales y reportes locales todavía pueden pertenecer al navegador, no a una cuenta aislada: **antes de habilitar más usuarios**, migrar/aislar los datos locales por identidad.
+- Una aceptación HTTP de Resend no prueba entrega final al buzón. El reporte PDF/CSV/JSON es local; el resumen servidor se envía en HTML.
+- No se registran ni exportan clips, fotos ni biometría. Las fuentes webcam/video requieren permiso o selección explícita.
 
-## Etapa 6: reportes y automatización (avance v1.7.0)
+## Documentación consolidada
 
-- Al cerrar un incidente YOLO se genera **automáticamente un reporte individual** en la bandeja local. Se guarda su cronología y estadísticas; recibe una clave idempotente `incident:{id}` y **no se duplica** al recargar o repetir snapshots.
-- Al abrir la app se prepara el resumen del día **anterior en horario de Lima**, si hubo incidentes; el operador puede simular el cierre de un día específico en `Reportes`. El contador diario considera incidentes por **hora de apertura**, no dos veces por cierre o reconocimiento.
-- `Reportes` permite filtrar la bandeja, descargar **PDF (A4), CSV y JSON**, y visualizar el log de generación/descargas. CSV protege contra fórmulas al abrirlo en hojas de cálculo.
-- **Toda la bandeja está marcada DEMO / LOCAL / NO ENVIADO**. La persistencia es `localStorage` del navegador y no implica que el correo se mande al administrador. El navegador cerrado no puede ejecutar reportes programados.
-- Incluidos, **sin desplegar**, `supabase/migrations/20261115_reports_pending.sql` y `supabase/functions/vision-daily-report/` como base de automatización remota con Resend. No se deben activar sin sincronización autenticada de incidentes y configuración segura de Supabase.
+- `docs/ETAPAS.md`: plan rector de ocho etapas, bitácora y criterios de salida, incluidos los resultados históricos y las pendientes reales.
+- `docs/ARQUITECTURA.md`: límites y capas técnicas, navegabilidad, persistencia, autenticación e integridad.
 
-### Prueba manual de etapa 6
-
-1. Entra a Monitoreo, confirma la apertura/cierre de un incidente YOLO; entra en **Reportes** y verifica el informe individual automático.
-2. Descarga el archivo PDF, CSV y JSON; comprueba cronología, cámara, zona, confianza y responsable si se reconoció.
-3. Recarga la web: la bandeja conserva el informe y no crea un duplicado.
-4. Pulsa **Generar resumen diario**, seleccionando el día de prueba en horario Lima; repite la operación y confirma que no aparece otro registro para ese día.
-5. Comprueba que la interfaz **no** afirma haber enviado correos electrónicos.
-
-### Puesta en producción de correos (pendiente)
-
-**Actualización v1.8.0:** el flujo remoto seguro está implementado de manera opt-in (Auth, RLS y sincronización de incidentes). Usa `@supabase/server` con clave `sb_secret_*` guardada en Vault para la tarea diaria, y `RESEND_API_KEY` exclusivamente en Edge Secrets. La guía vigente y el orden de activación están en `docs/ETAPAS.md`; no utilices el procedimiento de secret propio de la v1.7.0.
-
-**Documentación consolidada:** `docs/ARQUITECTURA.md` (decisiones técnicas) y `docs/ETAPAS.md` (cronología y criterios de aceptación), conforme al PDF rector v2.0.
-
-
-## Conexión remota opcional (v1.8.0)
-
-La versión local v1.7.0 sigue funcionando sin Supabase. Para autenticar usuarios,
-sincronizar incidentes YOLO y activar el reporte diario con Resend, sigue el capítulo
-**«Etapa 6 · v1.8.0»** de `docs/ETAPAS.md`. **No se envían correos reales hasta
-configurar usuarios, migraciones, secretos y Cron.** Los incidentes solo se sincronizan
-tras autorización expresa desde Reportes.
-
-Ejecuta `npm install` después de aplicar el ZIP, porque se añadió
-`@supabase/supabase-js`. Las variables VITE_* son únicamente URL y clave publicable;
-nunca añadas el service role o `RESEND_API_KEY` al frontend.
-
-
-## Inicio de sesión obligatorio — v1.8.1
-
-1. Conserva en `.env.local` `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. Nunca incluyas `sb_secret_*` ni claves de Resend en Vite.
-2. Tras `npm run dev`, entra en `/login` y utiliza la cuenta de Supabase que ya tenga `role = administrador` en `public.vision_ai_members`. El menú, Monitoreo y Reportes no aparecen antes de validar el rol.
-3. Al entrar, las rutas anteriores y los centros locales quedan disponibles. El botón de salida está arriba a la derecha; al salir se vuelve a `/login`.
-4. En Reportes, el panel de Supabase conserva **Autorizar y habilitar sincronización**; iniciar sesión por sí mismo no sincroniza incidentes.
-5. Si la cuenta tiene rol operador, supervisor, auditor o no tiene membresía, se muestra acceso restringido: los permisos RBAC se acordarán más adelante. No habilites estos roles con acceso total antes de aislar el almacenamiento local entre usuarios.
-
-La protección de rutas frontend es adicional a RLS, no sustituye la seguridad PostgreSQL. La integración Resend/Cron aún necesita su prueba de entrega real.
+**Estado:** primer avance de la etapa 7, **no cierre**. La etapa 6 permanece condicionada a la evidencia de la primera ejecución automática de Cron.

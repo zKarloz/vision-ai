@@ -6,8 +6,8 @@ import { EmptyState } from './EmptyState';
 export interface TableColumn<T> { key: string; header: string; render: (row: T) => ReactNode; className?: string }
 
 /** Tabla genérica paginada del cliente. Filtrado remoto y paginación de API se añadirán en Etapa 3. */
-export function DataTable<T>({ rows, columns, getRowKey, pageSize = 6, emptyMessage = 'No hay resultados para los filtros actuales.' }: {
-  rows: readonly T[]; columns: TableColumn<T>[]; getRowKey: (row: T) => string; pageSize?: number; emptyMessage?: string;
+export function DataTable<T>({ rows, columns, getRowKey, pageSize = 6, emptyMessage = 'No hay resultados para los filtros actuales.', accessibleName = 'Tabla de resultados' }: {
+  rows: readonly T[]; columns: TableColumn<T>[]; getRowKey: (row: T) => string; pageSize?: number; emptyMessage?: string; accessibleName?: string;
 }) {
   const [page, setPage] = useState(1);
   const safePageSize = Math.max(1, pageSize);
@@ -15,8 +15,9 @@ export function DataTable<T>({ rows, columns, getRowKey, pageSize = 6, emptyMess
   const current = Math.min(page, pages);
   const slice = rows.slice((current - 1) * safePageSize, current * safePageSize);
   return <div>
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto" role="region" tabIndex={0} aria-label={`${accessibleName}, desplazamiento horizontal`}>
       <table className="w-full min-w-[660px] text-left text-sm">
+        <caption className="sr-only">{accessibleName}</caption>
         <thead className="border-y border-[var(--border)] bg-[var(--muted-bg)] text-[11px] uppercase tracking-wide text-[var(--muted)]"><tr>{columns.map((column) => <th scope="col" key={column.key} className={`px-5 py-3 font-semibold ${column.className ?? ''}`}>{column.header}</th>)}</tr></thead>
         <tbody className="divide-y divide-[var(--border)]">{slice.map((row) => <tr key={getRowKey(row)} className="transition-colors hover:bg-[var(--hover)]">{columns.map((column) => <td key={column.key} className={`px-5 py-4 align-middle ${column.className ?? ''}`}>{column.render(row)}</td>)}</tr>)}</tbody>
       </table>

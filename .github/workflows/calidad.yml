@@ -1,0 +1,37 @@
+# Etapa 7 — integración continua; no usa secretos ni despliega producción.
+# Vercel conserva su pipeline de despliegue independiente.
+name: VISION AI - Calidad
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    name: Tests / TypeScript / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+      - name: Preparar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar dependencias según lockfile
+        run: npm ci
+      - name: Preparar modelo YOLO verificado
+        run: npm run model:download
+      - name: Ejecutar pruebas
+        run: npm run test
+      - name: Comprobar tipos
+        run: npm run typecheck
+      - name: Construir para Vercel
+        run: npm run build

@@ -1,6 +1,6 @@
 {
   "name": "vision-ai",
-  "version": "1.8.1-stage6-auth-gate",
+  "version": "1.9.0-stage7-quality",
   "private": true,
   "type": "module",
   "scripts": {
