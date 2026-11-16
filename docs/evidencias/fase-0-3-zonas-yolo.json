@@ -1,0 +1,723 @@
+{
+  "experiment": "VISION AI - Fase 0.3 - Seguimiento y zonas sobre imagen",
+  "generatedAt": "2026-11-14T21:43:05.058Z",
+  "provider": "webgpu",
+  "analysisCamera": "CAM-02",
+  "threshold": 0.25,
+  "captureZoom": 1.5,
+  "detectionSource": "ONNX / YOLO real, capturas de cámara virtual 3D",
+  "zoneSource": "Polígono dibujado manualmente en la imagen, no en el mundo 3D",
+  "polygon": [
+    {
+      "x": 0.30394307923771313,
+      "y": 0.7116349047141425
+    },
+    {
+      "x": 0.46241850551654967,
+      "y": 0.4263206285523236
+    },
+    {
+      "x": 0.7733513039117352,
+      "y": 0.5065613507188231
+    },
+    {
+      "x": 0.6890985456369108,
+      "y": 0.8489217652958877
+    }
+  ],
+  "tracking": {
+    "confirmFrames": 3,
+    "exitFrames": 2,
+    "maxMisses": 4
+  },
+  "note": "Las reglas geométricas 3D son independientes y NO se utilizan para generar detecciones YOLO.",
+  "metrics": {
+    "samples": 84,
+    "fps": 1.823734921227835,
+    "averageMs": 66.25,
+    "p95Ms": 166,
+    "framesWithPeople": 67
+  },
+  "events": [
+    {
+      "id": 5,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 203572,
+      "confidence": 0.3666277229785919,
+      "source": "yolo",
+      "key": "yolo-event-9"
+    },
+    {
+      "id": 4,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 193774,
+      "confidence": 0.5115176439285278,
+      "source": "yolo",
+      "key": "yolo-event-8"
+    },
+    {
+      "id": 3,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 183763,
+      "confidence": 0.38919711112976074,
+      "source": "yolo",
+      "key": "yolo-event-7"
+    },
+    {
+      "id": 2,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 174394,
+      "confidence": 0.8243230581283569,
+      "source": "yolo",
+      "key": "yolo-event-6"
+    },
+    {
+      "id": 1,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 167302,
+      "confidence": 0.6981654763221741,
+      "source": "yolo",
+      "key": "yolo-event-5"
+    },
+    {
+      "id": 4,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 151313,
+      "confidence": 0.7723169326782227,
+      "source": "yolo",
+      "key": "yolo-event-4"
+    },
+    {
+      "id": 3,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 140876,
+      "confidence": 0.6661466956138611,
+      "source": "yolo",
+      "key": "yolo-event-3"
+    },
+    {
+      "id": 2,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 132076,
+      "confidence": 0.7161500453948975,
+      "source": "yolo",
+      "key": "yolo-event-2"
+    },
+    {
+      "id": 1,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 126568,
+      "confidence": 0.2838602066040039,
+      "source": "yolo",
+      "key": "yolo-event-1"
+    }
+  ],
+  "samples": [
+    {
+      "atMs": 164105,
+      "inferenceMs": 169,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 164588,
+      "inferenceMs": 100,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 165074,
+      "inferenceMs": 39,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 165621,
+      "inferenceMs": 38,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 166271,
+      "inferenceMs": 142,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 166765,
+      "inferenceMs": 96,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 167302,
+      "inferenceMs": 75,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 167791,
+      "inferenceMs": 25,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 168347,
+      "inferenceMs": 28,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 168893,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 169527,
+      "inferenceMs": 101,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 170109,
+      "inferenceMs": 134,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 170542,
+      "inferenceMs": 20,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 171088,
+      "inferenceMs": 17,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 171638,
+      "inferenceMs": 20,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 172200,
+      "inferenceMs": 28,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 172752,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 173300,
+      "inferenceMs": 26,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 173847,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 174394,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 174970,
+      "inferenceMs": 50,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 175633,
+      "inferenceMs": 153,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 176074,
+      "inferenceMs": 43,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 176623,
+      "inferenceMs": 44,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 177180,
+      "inferenceMs": 51,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 177749,
+      "inferenceMs": 70,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 178305,
+      "inferenceMs": 70,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 178853,
+      "inferenceMs": 78,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 179416,
+      "inferenceMs": 84,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 179979,
+      "inferenceMs": 97,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 180590,
+      "inferenceMs": 158,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 181019,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 181562,
+      "inferenceMs": 30,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 182117,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 182799,
+      "inferenceMs": 168,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 183215,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 183764,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 184318,
+      "inferenceMs": 36,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 184995,
+      "inferenceMs": 162,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 185416,
+      "inferenceMs": 37,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 185958,
+      "inferenceMs": 29,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 186514,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 187202,
+      "inferenceMs": 166,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 187618,
+      "inferenceMs": 38,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 188167,
+      "inferenceMs": 38,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 188715,
+      "inferenceMs": 37,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 189391,
+      "inferenceMs": 160,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 189813,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 190347,
+      "inferenceMs": 23,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 190910,
+      "inferenceMs": 31,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 191487,
+      "inferenceMs": 58,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 192043,
+      "inferenceMs": 64,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 192612,
+      "inferenceMs": 85,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 193154,
+      "inferenceMs": 78,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 193774,
+      "inferenceMs": 145,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 194321,
+      "inferenceMs": 138,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 194758,
+      "inferenceMs": 31,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 195306,
+      "inferenceMs": 30,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 195856,
+      "inferenceMs": 31,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 196529,
+      "inferenceMs": 145,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 196966,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 197522,
+      "inferenceMs": 43,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 198068,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 198739,
+      "inferenceMs": 157,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 199176,
+      "inferenceMs": 43,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 199724,
+      "inferenceMs": 43,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 200274,
+      "inferenceMs": 44,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 200947,
+      "inferenceMs": 169,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 201371,
+      "inferenceMs": 44,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 201926,
+      "inferenceMs": 44,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 202475,
+      "inferenceMs": 43,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 203144,
+      "inferenceMs": 158,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 203573,
+      "inferenceMs": 44,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 204122,
+      "inferenceMs": 44,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 204670,
+      "inferenceMs": 43,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 205348,
+      "inferenceMs": 169,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 205760,
+      "inferenceMs": 30,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 206308,
+      "inferenceMs": 30,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 206857,
+      "inferenceMs": 30,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 207510,
+      "inferenceMs": 130,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 207976,
+      "inferenceMs": 44,
+      "detections": 0,
+      "tracks": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 208503,
+      "inferenceMs": 30,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 209040,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 209616,
+      "inferenceMs": 46,
+      "detections": 1,
+      "tracks": 1,
+      "confirmedInside": 1
+    }
+  ]
+}

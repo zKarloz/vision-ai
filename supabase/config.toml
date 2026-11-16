@@ -1,0 +1,5 @@
+# Función llamada exclusivamente por Supabase Cron con clave secreta en apikey.
+# verify_jwt=false porque los secretos sb_secret_* NO son JWT.
+# @supabase/server con auth:'secret' comprueba la clave ANTES del handler.
+[functions.vision-daily-report]
+verify_jwt = false

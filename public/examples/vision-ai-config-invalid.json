@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "cameras": [
+    {
+      "id": "CAM-01",
+      "name": "Almacén central",
+      "location": "Estanterías y picking",
+      "sourceType": "virtual-3d",
+      "enabled": true,
+      "createdAt": "2026-11-14T00:00:00.000Z",
+      "updatedAt": "2026-11-14T00:00:00.000Z"
+    },
+    {
+      "id": "CAM-02",
+      "name": "Área de maquinaria",
+      "location": "Zona restringida Z-02",
+      "sourceType": "virtual-3d",
+      "enabled": true,
+      "createdAt": "2026-11-14T00:00:00.000Z",
+      "updatedAt": "2026-11-14T00:00:00.000Z"
+    }
+  ],
+  "zones": [
+    {
+      "id": "Z-VIS-CAM-02",
+      "cameraId": "CAM-02",
+      "name": "Zona restringida - maquinaria",
+      "type": "restricted",
+      "polygon": [
+        {
+          "x": 1.2,
+          "y": 0.7116349047141425
+        },
+        {
+          "x": 0.46241850551654967,
+          "y": 0.4263206285523236
+        },
+        {
+          "x": 0.7733513039117352,
+          "y": 0.5065613507188231
+        },
+        {
+          "x": 0.6890985456369108,
+          "y": 0.8489217652958877
+        }
+      ],
+      "configVersion": 1,
+      "enabled": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-PERSON-CAM-02",
+      "zoneId": "Z-VIS-CAM-02",
+      "classId": "person",
+      "name": "Persona en zona restringida",
+      "minConfidence": 0.25,
+      "minFrames": 3,
+      "exitFrames": 2,
+      "cooldownSec": 5,
+      "severity": "high",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "name": "vision-ai",
+  "version": "1.8.1-stage6-auth-gate",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "model:download": "node scripts/download-model.mjs",
+    "assets:prepare": "node scripts/copy-ort-assets.mjs",
+    "postinstall": "node scripts/copy-ort-assets.mjs"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.12",
+    "lucide-react": "^0.468.0",
+    "onnxruntime-web": "1.22.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.9.5",
+    "tailwindcss": "^4.1.12",
+    "three": "^0.181.0",
+    "zod": "^3.25.76",
+    "@supabase/supabase-js": "^2.95.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@types/three": "^0.181.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.9.2",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

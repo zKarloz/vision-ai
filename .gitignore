@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+*.local
+coverage/
+public/ort/
+public/models/*.onnx
+.DS_Store
+
+# Archivos temporales
+*.tsbuildinfo
+
+# Configuración local de despliegue
+.vercel/
+
+# Estado local de Supabase CLI
+supabase/.temp/

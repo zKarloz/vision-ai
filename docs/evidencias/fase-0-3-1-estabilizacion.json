@@ -1,0 +1,1353 @@
+{
+  "experiment": "VISION AI - Fase 0.3.1 - Estabilización visual",
+  "generatedAt": "2026-11-14T22:09:32.851Z",
+  "provider": "webgpu",
+  "analysisCamera": "CAM-02",
+  "threshold": 0.1,
+  "captureZoom": 1.5,
+  "analysisIntervalMs": 300,
+  "visualLastKnownBoxMaxAgeMs": 1600,
+  "detectionSource": "ONNX / YOLO real, capturas de cámara virtual 3D",
+  "zoneSource": "Polígono dibujado manualmente en la imagen, no en el mundo 3D",
+  "polygon": [
+    {
+      "x": 0.30394307923771313,
+      "y": 0.7116349047141425
+    },
+    {
+      "x": 0.46241850551654967,
+      "y": 0.4263206285523236
+    },
+    {
+      "x": 0.7733513039117352,
+      "y": 0.5065613507188231
+    },
+    {
+      "x": 0.6890985456369108,
+      "y": 0.8489217652958877
+    }
+  ],
+  "tracking": {
+    "confirmFrames": 3,
+    "exitFrames": 2,
+    "maxMisses": 4
+  },
+  "note": "Las reglas geométricas 3D son independientes y NO se utilizan para generar detecciones YOLO.",
+  "metrics": {
+    "samples": 120,
+    "fps": 3.333146602431236,
+    "averageMs": 43.50833333333333,
+    "p95Ms": 98,
+    "framesWithPeople": 105
+  },
+  "trackingLoss": {
+    "interruptions": 16,
+    "recovered": 16,
+    "expired": 0,
+    "currentMissing": 0,
+    "missedFramesTotal": 16,
+    "longestGapMs": 686,
+    "longestMissStreak": 1,
+    "averageRecoveredGapMs": 582
+  },
+  "lossEpisodes": [
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 345970,
+      "endedAtMs": 346315,
+      "gapMs": 345,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 356966,
+      "endedAtMs": 357652,
+      "gapMs": 686,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 364487,
+      "endedAtMs": 365087,
+      "gapMs": 600,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 365087,
+      "endedAtMs": 365753,
+      "gapMs": 666,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 367169,
+      "endedAtMs": 367771,
+      "gapMs": 602,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 367771,
+      "endedAtMs": 368457,
+      "gapMs": 686,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 370491,
+      "endedAtMs": 371094,
+      "gapMs": 603,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 372100,
+      "endedAtMs": 372572,
+      "gapMs": 472,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 383672,
+      "endedAtMs": 384276,
+      "gapMs": 604,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 384276,
+      "endedAtMs": 384947,
+      "gapMs": 671,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 384947,
+      "endedAtMs": 385477,
+      "gapMs": 530,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 385477,
+      "endedAtMs": 386071,
+      "gapMs": 594,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 387044,
+      "endedAtMs": 387577,
+      "gapMs": 533,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 387577,
+      "endedAtMs": 388171,
+      "gapMs": 594,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 389740,
+      "endedAtMs": 390269,
+      "gapMs": 529,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    },
+    {
+      "cameraId": "CAM-02",
+      "trackId": 1,
+      "startedAtMs": 390269,
+      "endedAtMs": 390866,
+      "gapMs": 597,
+      "missedFrames": 1,
+      "outcome": "recovered"
+    }
+  ],
+  "events": [
+    {
+      "id": 5,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 382820,
+      "confidence": 0.7204169631004333,
+      "source": "yolo",
+      "key": "yolo-event-19"
+    },
+    {
+      "id": 4,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 374418,
+      "confidence": 0.8241031765937805,
+      "source": "yolo",
+      "key": "yolo-event-18"
+    },
+    {
+      "id": 3,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 363863,
+      "confidence": 0.3992060720920563,
+      "source": "yolo",
+      "key": "yolo-event-17"
+    },
+    {
+      "id": 2,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 355247,
+      "confidence": 0.7889291644096375,
+      "source": "yolo",
+      "key": "yolo-event-16"
+    },
+    {
+      "id": 1,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 345078,
+      "confidence": 0.3412506580352783,
+      "source": "yolo",
+      "key": "yolo-event-15"
+    },
+    {
+      "id": 3,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 325961,
+      "confidence": 0.47440147399902344,
+      "source": "yolo",
+      "key": "yolo-event-14"
+    },
+    {
+      "id": 2,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 317560,
+      "confidence": 0.8214581608772278,
+      "source": "yolo",
+      "key": "yolo-event-13"
+    },
+    {
+      "id": 1,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 313958,
+      "confidence": 0.6828378438949585,
+      "source": "yolo",
+      "key": "yolo-event-12"
+    },
+    {
+      "id": 11,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 307303,
+      "confidence": 0.4886540472507477,
+      "source": "yolo",
+      "key": "yolo-event-11"
+    },
+    {
+      "id": 10,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 298613,
+      "confidence": 0.8207583427429199,
+      "source": "yolo",
+      "key": "yolo-event-10"
+    },
+    {
+      "id": 9,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 289650,
+      "confidence": 0.2631107270717621,
+      "source": "yolo",
+      "key": "yolo-event-9"
+    },
+    {
+      "id": 8,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 279654,
+      "confidence": 0.7195293307304382,
+      "source": "yolo",
+      "key": "yolo-event-8"
+    },
+    {
+      "id": 7,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 269764,
+      "confidence": 0.7842807769775391,
+      "source": "yolo",
+      "key": "yolo-event-7"
+    },
+    {
+      "id": 6,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 260944,
+      "confidence": 0.6827850341796875,
+      "source": "yolo",
+      "key": "yolo-event-6"
+    },
+    {
+      "id": 5,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 250511,
+      "confidence": 0.7900270223617554,
+      "source": "yolo",
+      "key": "yolo-event-5"
+    },
+    {
+      "id": 4,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 33814,
+      "confidence": 0.5970194935798645,
+      "source": "yolo",
+      "key": "yolo-event-4"
+    },
+    {
+      "id": 3,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 23367,
+      "confidence": 0.5763566493988037,
+      "source": "yolo",
+      "key": "yolo-event-3"
+    },
+    {
+      "id": 2,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "left",
+      "atMs": 14564,
+      "confidence": 0.7989493608474731,
+      "source": "yolo",
+      "key": "yolo-event-2"
+    },
+    {
+      "id": 1,
+      "trackId": 1,
+      "cameraId": "CAM-02",
+      "type": "opened",
+      "atMs": 13456,
+      "confidence": 0.6364325284957886,
+      "source": "yolo",
+      "key": "yolo-event-1"
+    }
+  ],
+  "samples": [
+    {
+      "atMs": 356966,
+      "inferenceMs": 20,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 357272,
+      "inferenceMs": 20,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 357652,
+      "inferenceMs": 104,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 357882,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 358193,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 358491,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 358796,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 359095,
+      "inferenceMs": 36,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 359380,
+      "inferenceMs": 31,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 359771,
+      "inferenceMs": 110,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 359984,
+      "inferenceMs": 30,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 360297,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 360595,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 360887,
+      "inferenceMs": 37,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 361193,
+      "inferenceMs": 36,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 361484,
+      "inferenceMs": 29,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 361858,
+      "inferenceMs": 102,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 362117,
+      "inferenceMs": 71,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 362422,
+      "inferenceMs": 74,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 362665,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 362965,
+      "inferenceMs": 22,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 363266,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 363567,
+      "inferenceMs": 23,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 363863,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 364172,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 364487,
+      "inferenceMs": 40,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 364789,
+      "inferenceMs": 44,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 365087,
+      "inferenceMs": 43,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 365440,
+      "inferenceMs": 97,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 365753,
+      "inferenceMs": 82,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 366023,
+      "inferenceMs": 75,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 366269,
+      "inferenceMs": 27,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 366575,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 366869,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 367169,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 367472,
+      "inferenceMs": 25,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 367771,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 368142,
+      "inferenceMs": 96,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 368457,
+      "inferenceMs": 109,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 368671,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 368966,
+      "inferenceMs": 22,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 369265,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 369567,
+      "inferenceMs": 23,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 369864,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 370166,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 370491,
+      "inferenceMs": 43,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 370794,
+      "inferenceMs": 47,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 371094,
+      "inferenceMs": 48,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 371399,
+      "inferenceMs": 54,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 371704,
+      "inferenceMs": 53,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 372100,
+      "inferenceMs": 145,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 372270,
+      "inferenceMs": 24,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 372572,
+      "inferenceMs": 23,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 372864,
+      "inferenceMs": 22,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 373167,
+      "inferenceMs": 22,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 373469,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 373764,
+      "inferenceMs": 21,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 374138,
+      "inferenceMs": 94,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 374418,
+      "inferenceMs": 74,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 374722,
+      "inferenceMs": 73,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 374969,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 375266,
+      "inferenceMs": 23,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 375565,
+      "inferenceMs": 23,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 375870,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 376170,
+      "inferenceMs": 22,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 376471,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 376837,
+      "inferenceMs": 91,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 377134,
+      "inferenceMs": 85,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 377381,
+      "inferenceMs": 29,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 377678,
+      "inferenceMs": 27,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 377972,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 378272,
+      "inferenceMs": 27,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 378570,
+      "inferenceMs": 27,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 378874,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 379244,
+      "inferenceMs": 96,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 379543,
+      "inferenceMs": 95,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 379822,
+      "inferenceMs": 77,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 380120,
+      "inferenceMs": 74,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 380370,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 380669,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 380972,
+      "inferenceMs": 27,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 381268,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 381567,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 381867,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 382238,
+      "inferenceMs": 88,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 382529,
+      "inferenceMs": 81,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 0
+    },
+    {
+      "atMs": 382820,
+      "inferenceMs": 74,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 383067,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 383368,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 383672,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 383967,
+      "inferenceMs": 24,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 384276,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 384571,
+      "inferenceMs": 23,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 384947,
+      "inferenceMs": 96,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 385181,
+      "inferenceMs": 28,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 385477,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 385772,
+      "inferenceMs": 26,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 386071,
+      "inferenceMs": 24,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 386373,
+      "inferenceMs": 27,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 386669,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 387044,
+      "inferenceMs": 98,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 387321,
+      "inferenceMs": 74,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 387577,
+      "inferenceMs": 28,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 387875,
+      "inferenceMs": 28,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 388171,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 388472,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 388769,
+      "inferenceMs": 26,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 389071,
+      "inferenceMs": 27,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 389447,
+      "inferenceMs": 101,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 389740,
+      "inferenceMs": 93,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 389965,
+      "inferenceMs": 22,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 390269,
+      "inferenceMs": 22,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 390568,
+      "inferenceMs": 24,
+      "detections": 0,
+      "tracks": 0,
+      "temporarilyMissing": 1,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 390866,
+      "inferenceMs": 23,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 391165,
+      "inferenceMs": 22,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 391466,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 391843,
+      "inferenceMs": 94,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 392122,
+      "inferenceMs": 76,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 392420,
+      "inferenceMs": 75,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    },
+    {
+      "atMs": 392668,
+      "inferenceMs": 25,
+      "detections": 1,
+      "tracks": 1,
+      "temporarilyMissing": 0,
+      "confirmedInside": 1
+    }
+  ]
+}
