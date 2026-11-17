@@ -1,16 +1,15 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ReportCenter } from '../../application/reports/ReportCenter';
 import { useIncidentCenter } from './IncidentCenterProvider';
+import { useAccountStorage } from './AccountStorageProvider';
 
 const Context = createContext<ReportCenter | null>(null);
 
 /** Bandeja global: se actualiza con cierres YOLO incluso fuera de la ruta Reportes. */
 export function ReportCenterProvider({ children }: { children: ReactNode }) {
   const { state: incidentState } = useIncidentCenter();
-  const [center] = useState(() => {
-    try { return new ReportCenter(typeof window !== 'undefined' ? window.localStorage : null); }
-    catch { return new ReportCenter(null); }
-  });
+  const storage = useAccountStorage();
+  const [center] = useState(() => new ReportCenter(storage));
 
   useEffect(() => {
     center.syncClosedIncidents(incidentState);

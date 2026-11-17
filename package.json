@@ -1,6 +1,6 @@
 {
   "name": "vision-ai",
-  "version": "1.9.1-stage7-product-cleanup",
+  "version": "1.9.2-stage7-account-isolation",
   "private": true,
   "type": "module",
   "scripts": {

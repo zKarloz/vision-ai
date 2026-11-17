@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { wrappedFocusTarget } from '../utils/focusTrap';
 
 interface Props { open: boolean; onClose: () => void; title: string; description?: string; size?: 'md' | 'lg'; children: ReactNode }
 
@@ -21,11 +22,10 @@ export function Modal({ open, onClose, title, description, size = 'md', children
       if (event.key === 'Tab' && dialogRef.current) {
         const selector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
         const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(selector)).filter((element) => element.offsetParent !== null);
-        if (!focusable.length) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const target = wrappedFocusTarget(focusable, focused, event.shiftKey);
+        if (target) { event.preventDefault(); target.focus(); }
+        else if (!focusable.length) { event.preventDefault(); closeRef.current?.focus(); }
       }
     };
     document.addEventListener('keydown', onKey);

@@ -13,3 +13,13 @@ Esta lista es exclusivamente para validación de desarrollo y defensa académica
 9. Accesibilidad: anchos 375/768/1280px, teclado Tab/Enter/Escape, ambos temas y foco visible.
 
 **Limitaciones:** el navegador cerrado no ejecuta YOLO; el modelo actual identifica personas, no certifica detección de cascos, chalecos ni conos. El monitoreo y la configuración de fuentes locales no son multiusuario hasta implementar RBAC y almacenamiento compartido.
+
+
+### Control interno de v1.9.2 (no mostrar en el producto)
+
+- Respaldar la instalación y verificar que al entrar como administrador habitual el historial de incidentes, reportes, cámaras y zonas permanece accesible después de la migración.
+- Cerrar sesión y comprobar que las rutas directas no muestran información local.
+- Validar en pruebas automatizadas que una segunda cuenta con otro UUID no restaura el historial anterior desde el mismo navegador. No habilitar otro rol operativo únicamente para esta comprobación.
+- Desconectar Internet con la sesión previamente validada, provocar un incidente auténtico YOLO y comprobar que queda pendiente de sincronización; restaurar conexión y verificar su envío idempotente.
+- Abrir modal y menú lateral móvil: Tab, Shift+Tab y Escape deben funcionar sin fuga de foco. Verificar zoom de navegador 200% y tema oscuro.
+- Verificar que GitHub Actions y Vercel compilan la versión sin modificar Supabase Cron ni Resend.

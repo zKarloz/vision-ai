@@ -395,3 +395,19 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 - **Límite:** el histórico local de incidentes/reportes sigue basado en el navegador y no está segregado por usuario. RBAC y aislamiento local multiusuario quedan explícitamente pendientes antes de autorizar nuevas cuentas (actualmente solo administrador ingresa).
 - **Pruebas nuevas:** `tests/remoteCheckpointStage7.test.ts` agrega seis escenarios de incremento/idempotencia/cursor; la aceptación completa depende de `npm run test && npm run typecheck && npm run build` en el equipo del usuario y de GitHub Actions/Vercel.
 - **Etapa 6:** el envío manual con Resend fue confirmado por el usuario, y Cron tiene dos tareas activas; se espera evidencia de la primera ejecución programada para su cierre. No se alteran migraciones ni Edge Functions.
+
+
+## Etapa 7 · v1.9.2 — Aislamiento local por cuenta y navegación accesible (16/11/2026)
+
+**Motivación:** el login y RLS ya protegen el backend, pero en v1.9.1 las claves de incidentes, reportes y configuración vivían bajo `localStorage` global. Dos administradores con el mismo perfil de Chrome podían mezclar historiales y sincronizar datos de otra sesión. Debe resolverse antes de diseñar RBAC de múltiples usuarios.
+
+**Implementación:**
+- `AccountStorageProvider` se monta únicamente tras verificar Supabase Auth y el rol autorizado. Los repositorios de cámara/configuración, incidentes y reportes reciben el mismo adaptador `createAccountScopedStorage`, que antepone el UUID del usuario verificado. La temática claro/oscuro y el token propio de Supabase no se alteran.
+- Migración idempotente desde seis claves heredadas: las copias se atribuyen **únicamente a la primera cuenta administradora** autenticada en ese navegador. Una cuenta diferente no puede reutilizar esa importación a través de la aplicación. No se reemplazan datos ya guardados en el nuevo espacio. Si una escritura falla por falta de cuota o bloqueo de `localStorage`, la migración no se declara completada y se muestra un error recuperable, en lugar de continuar con un historial aparentemente vacío.
+- **Importante:** los valores legados originales permanecen como respaldo. `localStorage` no está cifrado ni protege datos de un usuario que tiene control del perfil de navegador/devtools. Este aislamiento reduce mezclas accidentales de cuentas en la interfaz pero **NO autoriza habilitar RBAC multiusuario de producción todavía**. Antes de habilitarlo, revisar retención, borrado, permisos remotos y pruebas con dos usuarios distintos.
+- Mejora de accesibilidad: `wrappedFocusTarget` se usa en el menú móvil y el componente `Modal` para contener el foco con Tab/Shift+Tab, incluso si una integración externa movió el foco fuera del diálogo.
+- Se añadieron **16 pruebas Vitest**: 11 de almacenamiento/migración, 5 de foco. Las 16 pasaron en una comprobación aislada con Node y TypeScript transpilation. **No se ejecutaron aquí Vitest completo, typecheck React ni build de Vite** por ausencia de dependencias npm. Validar localmente y comprobar GitHub Actions antes de subir a producción.
+
+**Plan de aceptación v1.9.2:** respaldo del navegador → actualización incremental → `npm run test && npm run typecheck && npm run build` → login administrador → conservar cámaras, zonas, incidentes y reportes → confirmar sincronización Supabase → comprobar diálogos con Tab/Shift+Tab/Escape y diseño móvil → verificar GitHub Actions / Vercel.
+
+**Etapa 6 aún pendiente:** primera ejecución automática real de Supabase Cron confirmada en `cron.job_run_details`, trabajo remoto y correo del día correcto. El correo manual ya fue recibido, pero no equivale a la prueba programada.

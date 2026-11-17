@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useSyncExternal
 import { IncidentCenter } from '../../application/incidents/IncidentCenter';
 import { shouldSound } from '../../core/domain/alarmPolicy';
 import { Siren } from '../../infrastructure/simulation/Siren';
+import { useAccountStorage } from './AccountStorageProvider';
 
 interface IncidentContextValue {
   center: IncidentCenter;
@@ -18,11 +19,8 @@ const Context = createContext<IncidentContextValue | null>(null);
  * Sin navegador activo no hay monitoreo YOLO continuo ni alarma garantizada.
  */
 export function IncidentCenterProvider({ children }: { children: ReactNode }) {
-  const [center] = useState(() => {
-    // Algunos navegadores bloquean incluso el acceso a window.localStorage.
-    try { return new IncidentCenter(typeof window !== 'undefined' ? window.localStorage : null); }
-    catch { return new IncidentCenter(null); }
-  });
+  const storage = useAccountStorage();
+  const [center] = useState(() => new IncidentCenter(storage));
   const sirenRef = useRef<Siren | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [soundError, setSoundError] = useState('');

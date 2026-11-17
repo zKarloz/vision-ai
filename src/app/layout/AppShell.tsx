@@ -6,6 +6,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { useIncidentCenter } from '../providers/IncidentCenterProvider';
 import { useRemoteSync } from '../providers/RemoteSyncProvider';
 import { cn } from '../../shared/utils/cn';
+import { wrappedFocusTarget } from '../../shared/utils/focusTrap';
 
 const nav = [
   { to: '/', text: 'Resumen', icon: LayoutDashboard },
@@ -48,14 +49,9 @@ export function AppShell() {
       const focusable = Array.from(sidebarRef.current?.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), input:not([disabled])',
       ) ?? []).filter(element => element.getClientRects().length > 0);
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !sidebarRef.current?.contains(document.activeElement))) {
-        event.preventDefault(); last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !sidebarRef.current?.contains(document.activeElement))) {
-        event.preventDefault(); first.focus();
-      }
+      const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const target = wrappedFocusTarget(focusable, focused, event.shiftKey);
+      if (target) { event.preventDefault(); target.focus(); }
     };
     document.addEventListener('keydown', onDialogKey);
     return () => document.removeEventListener('keydown', onDialogKey);
@@ -91,7 +87,7 @@ export function AppShell() {
       </div>
       <div className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.19em] text-[var(--sidebar-muted)]">Espacio de trabajo</div>
       <nav aria-label="Navegación principal" className="space-y-1">{nav.map(({ to, text, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors', isActive ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]')}><Icon size={18} /><span className="flex-1">{text}</span></NavLink>)}</nav>
-      <div className="mt-auto border-t border-[var(--sidebar-border)] px-3 pt-4 text-[11px] text-[var(--sidebar-muted)]">VISION AI · v1.9.1</div>
+      <div className="mt-auto border-t border-[var(--sidebar-border)] px-3 pt-4 text-[11px] text-[var(--sidebar-muted)]">VISION AI · v1.9.2</div>
     </aside>
     <div className="min-h-screen lg:pl-[248px]">
       <header className="sticky top-0 z-20 flex h-[70px] items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/95 px-5 backdrop-blur md:px-8">

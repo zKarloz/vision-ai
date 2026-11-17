@@ -5,6 +5,7 @@ import { cameraMonitoringPolicy, invalidatesImageZone } from '../../core/domain/
 import { hasVirtualPerspective, type Camera, type CameraDraft } from '../../core/domain/camera';
 import { STARTER_PERSON_RULE, STARTER_RESTRICTED_ZONE } from '../../core/domain/zone';
 import { VersionedLocalConfigRepository, type ConfigState } from '../../infrastructure/config/VersionedLocalConfigRepository';
+import { useAccountStorage } from './AccountStorageProvider';
 import { normalizedConfig, validateConfig, type ConfigSnapshot } from '../../application/config/configSchema';
 
 interface CameraContextValue {
@@ -25,7 +26,8 @@ const Context = createContext<CameraContextValue | null>(null);
 
 /** Única fuente local de verdad para cámaras, zonas y reglas versionadas. */
 export function CameraRegistryProvider({ children }: { children: ReactNode }) {
-  const [repo] = useState(() => new VersionedLocalConfigRepository(localStorage));
+  const storage = useAccountStorage();
+  const [repo] = useState(() => new VersionedLocalConfigRepository(storage));
   const [configState, setConfigState] = useState<ConfigState>(() => repo.load());
   const config = repo.current(configState).snapshot;
 

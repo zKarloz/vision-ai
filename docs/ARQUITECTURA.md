@@ -192,3 +192,12 @@ Tras autorizar sesión y membresía, `RemoteSyncProvider` inicia sincronización
 El menú de cuenta reúne notificaciones de incidentes pendientes, tema, estado de sincronización y salida. Se conserva el principio de un único motor ONNX Worker; ningún ajuste de esta entrega toca el algoritmo de inferencia.
 
 **Pendiente de seguridad para RBAC:** separar cámaras, reportes e incidentes en almacenamiento local por identidad antes de habilitar usuarios adicionales; esta versión solo concede acceso completo al administrador.
+
+
+### Etapa 7 · Separación de datos locales por identidad (v1.9.2)
+
+`AuthProvider` verifica Supabase Auth y la membresía real con RLS; **solo entonces** `RootApp` monta `AccountStorageProvider(userId)` y sus hijos. `AccountScopedStorage` aplica un espacio de claves `vision-ai:account-data:v1:<user_id>:` a los repositorios de cámaras/configuración, incidentes y reportes. El checkpoint de sincronización conserva su propia separación por `user_id + installation_id`. Esto evita que el frontend restaure automáticamente el historial de otro administrador que usó el mismo navegador.
+
+La migración de v1.9.1 es idempotente y se asigna una sola vez a la primera cuenta admin que ingresa tras actualizar. Si falla la copia, se muestra un bloqueo de recuperación y no se inicia Monitoreo ni se suben datos incompletos. Se preservan las claves originales sin modificación para permitir recuperación; **esto no representa cifrado ni protección del almacenamiento frente al dueño del perfil del navegador**. La seguridad de PostgreSQL sigue descansando en RLS, y RBAC completo continúa pendiente de diseño/validación antes de habilitar otros roles.
+
+`Modal` y el menú móvil usan `wrappedFocusTarget` para la accesibilidad del foco circular por teclado. No alteran el estado de YOLO ni las acciones de los incidentes. Supabase Cron, Resend y las migraciones SQL permanecen sin cambios.

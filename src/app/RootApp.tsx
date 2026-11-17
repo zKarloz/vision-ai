@@ -6,6 +6,7 @@ import { ThemeProvider } from './providers/ThemeProvider';
 import { IncidentCenterProvider } from './providers/IncidentCenterProvider';
 import { ReportCenterProvider } from './providers/ReportCenterProvider';
 import { RemoteSyncProvider } from './providers/RemoteSyncProvider';
+import { AccountStorageProvider } from './providers/AccountStorageProvider';
 import { AppShell } from './layout/AppShell';
 import { AuthEntryPage } from '../modules/auth/AuthEntryPage';
 import { DashboardPage } from '../modules/dashboard/DashboardPage';
@@ -31,7 +32,7 @@ function AuthenticatedProduct() {
   }
   // Montar los centros locales solo después de comprobar el acceso evita mostrar
   // historial, configuración y reportes antes de iniciar sesión.
-  return <CameraRegistryProvider><IncidentCenterProvider><ReportCenterProvider><RemoteSyncProvider>
+  return <AccountStorageProvider key={auth.session.user.id} userId={auth.session.user.id}><CameraRegistryProvider><IncidentCenterProvider><ReportCenterProvider><RemoteSyncProvider>
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<DashboardPage />} />
@@ -44,7 +45,7 @@ function AuthenticatedProduct() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
-  </RemoteSyncProvider></ReportCenterProvider></IncidentCenterProvider></CameraRegistryProvider>;
+  </RemoteSyncProvider></ReportCenterProvider></IncidentCenterProvider></CameraRegistryProvider></AccountStorageProvider>;
 }
 
 /** Inicio único del producto: autenticación obligatoria con Supabase. */
