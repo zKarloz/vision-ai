@@ -1,6 +1,7 @@
 import { Activity, ArrowRight, ArrowUpRight, Camera, CheckCircle2, Cpu, Database, FileText, Layers3, RadioTower, ShieldCheck, Video } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCameraRegistry } from '../../app/providers/CameraRegistryProvider';
+import { useRemoteSync } from '../../app/providers/RemoteSyncProvider';
 import { summarizeCameras } from '../../core/domain/camera';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
@@ -17,6 +18,7 @@ const steps = [
 /** Resumen real del registro local; evita inventar ocupación o incidentes. */
 export function DashboardPage() {
   const { cameras } = useCameraRegistry();
+  const remote = useRemoteSync();
   const summary = summarizeCameras(cameras);
   const metrics = [
     { label: 'Cámaras registradas', value: summary.total, icon: Camera, note: 'Configuración local' },
@@ -25,7 +27,7 @@ export function DashboardPage() {
     { label: 'Otros tipos de fuente', value: summary.other, icon: RadioTower, note: 'MP4 y webcam disponibles' },
   ];
   return <>
-    <PageHeader eyebrow="Panel principal · Etapa 7" title="Centro de control" description="Plataforma de monitoreo visual industrial. El visor 3D y el motor YOLO real ahora forman parte nativa de Monitoreo." actions={<Link to="/monitoreo" className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-text)] hover:opacity-90"><Activity size={17} />Abrir monitoreo 3D <ArrowUpRight size={15} /></Link>} />
+    <PageHeader title="Centro de control" description="Plataforma de monitoreo visual industrial. El visor 3D y el motor YOLO real ahora forman parte nativa de Monitoreo." actions={<Link to="/monitoreo" className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-text)] hover:opacity-90"><Activity size={17} />Abrir monitoreo 3D <ArrowUpRight size={15} /></Link>} />
     <AlarmStatusBar/>
     <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores del registro local">{metrics.map(({ label, value, icon: Icon, note }) => <Panel key={label} className="p-5"><div className="mb-5 flex items-center justify-between"><span className="text-xs font-semibold text-[var(--muted)]">{label}</span><span className="rounded-xl bg-[var(--muted-bg)] p-2 text-[var(--accent)]"><Icon size={19} /></span></div><p className="text-3xl font-bold tracking-tight tabular-nums">{value}</p><p className="mt-1 text-[11px] text-[var(--muted)]">{note}</p></Panel>)}</section>
     <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
@@ -35,8 +37,8 @@ export function DashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-6 py-4"><p className="text-xs text-[var(--muted)]">Fuente de referencia: documento de arquitectura VISION AI v2.0</p><Link to="/monitoreo" className="inline-flex items-center gap-2 text-xs font-bold text-[var(--accent)] hover:underline">Ver monitoreo <ArrowRight size={14} /></Link></div>
       </Panel>
       <div className="space-y-5">
-        <Panel className="p-6"><div className="flex items-center gap-3"><div className="rounded-xl bg-[var(--muted-bg)] p-2.5 text-[var(--accent)]"><ShieldCheck size={22} /></div><div><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Estado del proyecto</p><h2 className="text-lg font-bold">Etapa 7 en validación</h2></div></div><div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--muted-bg)]" aria-label="Etapa 7 en validación, integración de fuentes y cámaras disponible"><div className="h-full w-[85%] rounded-full bg-[var(--primary)]" /></div><p className="mt-4 text-xs leading-relaxed text-[var(--muted)]">YOLO, cámaras y Supabase ya funcionan en el despliegue. El primer correo manual con Resend fue validado; falta verificar la primera ejecución automática de Cron. La compatibilidad RTSP no está implementada.</p><Link to="/camaras" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)] hover:underline">Gestionar registro de cámaras <ArrowRight size={16} /></Link></Panel>
-        <Panel className="p-6"><div className="mb-3 flex items-center gap-2 text-sm font-bold"><FileText size={18} className="text-[var(--accent)]" /> Datos sin fabricar</div><p className="text-xs leading-6 text-[var(--muted)]">Las cifras del panel principal se calculan del registro local de cámaras. Los incidentes proceden de YOLO; su sincronización a Supabase requiere autorización explícita en Reportes.</p></Panel>
+        <Panel className="p-6"><div className="flex items-center gap-3"><div className="rounded-xl bg-[var(--muted-bg)] p-2.5 text-[var(--accent)]"><ShieldCheck size={22} /></div><div><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Persistencia remota</p><h2 className="text-lg font-bold">{remote.error ? 'Requiere atención' : remote.busy ? 'Sincronizando incidentes' : remote.pendingCount ? 'Cambios pendientes' : remote.lastSyncedAt ? 'Datos sincronizados' : 'Sincronización inicial'}</h2></div></div><p className="mt-4 text-xs leading-relaxed text-[var(--muted)]">Los incidentes YOLO y las auditorías se envían a Supabase tras iniciar sesión. Los reportes diarios se generan desde la información remota disponible.</p><Link to="/reportes" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)] hover:underline">Ver estado de reportes <ArrowRight size={16} /></Link></Panel>
+        <Panel className="p-6"><div className="mb-3 flex items-center gap-2 text-sm font-bold"><FileText size={18} className="text-[var(--accent)]" /> Datos verificables</div><p className="text-xs leading-6 text-[var(--muted)]">Las cifras del panel se calculan de las cámaras registradas. Los incidentes provienen de detecciones YOLO confirmadas; no se guardan imágenes ni clips.</p></Panel>
       </div>
     </div>
   </>;

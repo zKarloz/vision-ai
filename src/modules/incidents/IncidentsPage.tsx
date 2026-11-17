@@ -75,7 +75,7 @@ export function IncidentsPage() {
   ];
 
   return <>
-    <PageHeader eyebrow="Etapa 5 · Gestión de incidentes" title="Incidentes y auditoría"
+    <PageHeader title="Incidentes y auditoría"
       description="Incidentes confirmados por YOLO, alarmas sonoras opcionales, reconocimiento y trazabilidad. Datos locales de demostración; sin autenticación de usuarios todavía."
       actions={<Button onClick={exportAudit} disabled={!state.incidents.length}><Download size={16}/> Exportar historial JSON</Button>}/>
     <AlarmStatusBar/>

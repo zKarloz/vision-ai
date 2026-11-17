@@ -52,7 +52,7 @@ export const QUALITY_STEPS: readonly QualityStep[] = [
   },
   {
     id: 'remote', title: 'Persistencia remota', category: 'remoto',
-    description: 'Autoriza expresamente la sincronización y comprueba las filas del incidente en Supabase. No publiques claves secretas en el navegador.',
+    description: 'Inicia sesión y comprueba la sincronización automática de incidentes y auditorías en Supabase. No publiques claves secretas en el navegador.',
     expected: 'Metadatos YOLO y auditorías persistidos con una cuenta administradora; RLS aplicado.',
     path: '/reportes', action: 'Revisar sincronización',
   },

@@ -181,3 +181,14 @@ La ruta `/guia` está detrás de `AuthenticatedProduct`, exactamente como el das
 Accesibilidad: enlace al contenido principal, foco visible, menú móvil con Tab contenido/Escape, navegación responsiva, tablas con `caption` y región desplazable accesible y preferencia de movimiento reducido. Requiere comprobación humana adicional en Chrome con resolución reducida y lectores de pantalla para cerrar la etapa.
 
 Datos y permisos: persistencia local por navegador; sincronización remota solo con aceptación explícita y usuario autorizado. **No habilitar otros roles** hasta aislar el almacenamiento local y probar permisos por acción, no solo visibilidad de rutas. Supabase Cron y Resend ya se configuraron, con una entrega manual validada; la ejecución programada debe verificarse todavía para cerrar etapa 6.
+
+
+### Ajuste de producto y sincronización v1.9.1
+
+La guía de calidad no se expone en la interfaz: `docs/GUIA_PRUEBAS_INTERNA.md` preserva el protocolo de aceptación; `application/qualityGuide.ts` conserva la especificación verificable por tests. La ruta `/guia` se elimina.
+
+Tras autorizar sesión y membresía, `RemoteSyncProvider` inicia sincronización de incidentes YOLO y auditoría automáticamente; `application/remote/syncCheckpoint.ts` calcula el delta sin considerar el campo `updated_at`, usa un cursor separado por identidad e instalación y lo confirma solo tras la respuesta satisfactoria de PostgreSQL. Los reintentos se programan tras la conectividad, visibilidad de pestaña y cada minuto. Supabase RLS (no el frontend ni el cursor) controla privilegios. No se envían imágenes, clips ni datos de detección falsos. La bandeja local continúa como respaldo del navegador, sin garantía de servicio con el navegador cerrado.
+
+El menú de cuenta reúne notificaciones de incidentes pendientes, tema, estado de sincronización y salida. Se conserva el principio de un único motor ONNX Worker; ningún ajuste de esta entrega toca el algoritmo de inferencia.
+
+**Pendiente de seguridad para RBAC:** separar cámaras, reportes e incidentes en almacenamiento local por identidad antes de habilitar usuarios adicionales; esta versión solo concede acceso completo al administrador.

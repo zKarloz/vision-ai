@@ -31,7 +31,7 @@ export function MonitoringPage() {
   });
 
   return <>
-    <PageHeader eyebrow="Monitoreo · Visión computacional real" title="Monitoreo de cámaras"
+    <PageHeader title="Monitoreo de cámaras"
       description="Escenario 3D compartido o fuentes locales MP4/WebM y webcam. Las detecciones de personas proceden de YOLO sobre fotogramas reales."/>
     <AlarmStatusBar/>
     <Panel className="mb-5 flex flex-wrap items-center gap-3 p-4">

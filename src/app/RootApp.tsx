@@ -15,7 +15,6 @@ import { ZonesPage } from '../modules/zones/ZonesPage';
 import { IncidentsPage } from '../modules/incidents/IncidentsPage';
 import { ReportsPage } from '../modules/reports/ReportsPage';
 import { SettingsPage } from '../modules/settings/SettingsPage';
-import { QualityPage } from '../modules/quality/QualityPage';
 
 // El visor 3D y ONNX no se inicializan hasta entrar a Monitoreo con sesión autorizada.
 const MonitoringPage = lazy(() => import('../modules/monitoring/MonitoringPage').then(module => ({ default: module.MonitoringPage })));
@@ -42,7 +41,6 @@ function AuthenticatedProduct() {
         <Route path="incidentes" element={<IncidentsPage />} />
         <Route path="reportes" element={<ReportsPage />} />
         <Route path="configuracion" element={<SettingsPage />} />
-        <Route path="guia" element={<QualityPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

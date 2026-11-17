@@ -85,7 +85,7 @@ export function SettingsPage() {
   ];
 
   return <>
-    <PageHeader eyebrow="Administración · Etapa 3" title="Configuración y carga de datos"
+    <PageHeader title="Configuración y carga de datos"
       description="Importa y exporta cámaras, zonas y reglas. Las versiones se validan, publican íntegramente y pueden revertirse." />
     <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
       <Panel className="p-5">

@@ -12,7 +12,7 @@ export function ZonesPage() {
   const zones = polygonsFromConfig(config.zones);
   const rule = config.rules.find(item => item.classId === 'person' && item.enabled);
   return <>
-    <PageHeader eyebrow="Dominio · Etapa 3" title="Zonas y reglas"
+    <PageHeader title="Zonas y reglas"
       description="Polígonos normalizados sobre imágenes RGB, reglas independientes del modelo YOLO y configuración por perspectiva 3D." />
     <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
       <Panel className="overflow-hidden">

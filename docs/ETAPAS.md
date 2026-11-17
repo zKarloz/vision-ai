@@ -383,3 +383,15 @@ El usuario confirmó después de la v1.8.1:
 Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga del modelo YOLO con el hash verificado por el script del proyecto, Vitest, TypeScript y Vite Build con Node 22 ante push/PR a `main`, además de activación manual. No necesita secretos del frontend, Resend o Supabase y **no despliega por sí sola**; Vercel conserva el despliegue de la rama.
 
 **Antes de hacer push**, ejecutar `npm install` en el proyecto actualizado para que el `package-lock.json` del repositorio refleje la versión de `package.json` (sin paquetes nuevos). Un `npm ci` sin lockfile correcto fallaría y no implica fallo de la lógica del proyecto. La descarga del modelo requiere acceso a su origen externo, por lo que una indisponibilidad de la red puede producir una ejecución roja aunque el código no haya cambiado. Verificar en GitHub → Actions el resultado real, no afirmar que CI está verde sin evidencia.
+
+
+## Etapa 7 — Actualización v1.9.1 · Interfaz de producto y sincronización
+
+- Se retira la vista `/guia` del frontend y del menú: la lista de aceptación pasa a `docs/GUIA_PRUEBAS_INTERNA.md`; GitHub Actions, Vitest y pruebas internas siguen presentes. La validación académica no se expone al usuario operativo.
+- El sidebar elimina la tarjeta «Motor de visión» y el pie de etapa; las cabeceras de módulos ya no muestran etiquetas de desarrollo. Se retira el indicador de avance académico del dashboard en favor del estado de persistencia.
+- El topbar presenta una sola cuenta desplegable que muestra identidad y rol reales, notificaciones de incidentes pendientes, alternancia de tema y cierre de sesión. Cierra mediante Escape, click fuera o navegación; mantiene el menú lateral móvil accesible.
+- La sincronización remota se inicia automáticamente tras acceso autorizado y se reintenta cuando el navegador detecta conexión, al regresar a la pestaña o periódicamente. Solo transmite metadatos YOLO y auditorías; no se envían imágenes/clip ni claves privadas.
+- Las actualizaciones son incrementales mediante un checkpoint local por usuario e instalación. El cursor solo avanza tras completar los upserts de incidente y auditoría; fallos mantienen datos en el IncidentCenter local. Se conserva un botón de reintento y un estado visible.
+- **Límite:** el histórico local de incidentes/reportes sigue basado en el navegador y no está segregado por usuario. RBAC y aislamiento local multiusuario quedan explícitamente pendientes antes de autorizar nuevas cuentas (actualmente solo administrador ingresa).
+- **Pruebas nuevas:** `tests/remoteCheckpointStage7.test.ts` agrega seis escenarios de incremento/idempotencia/cursor; la aceptación completa depende de `npm run test && npm run typecheck && npm run build` en el equipo del usuario y de GitHub Actions/Vercel.
+- **Etapa 6:** el envío manual con Resend fue confirmado por el usuario, y Cron tiene dos tareas activas; se espera evidencia de la primera ejecución programada para su cierre. No se alteran migraciones ni Edge Functions.

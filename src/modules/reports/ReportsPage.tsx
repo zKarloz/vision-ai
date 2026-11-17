@@ -57,7 +57,7 @@ export function ReportsPage() {
   ];
 
   return <>
-    <PageHeader eyebrow="Etapa 6 · Automatización" title="Reportes y bandeja"
+    <PageHeader title="Reportes y bandeja"
       description="Reportes PDF/CSV/JSON locales y sincronización opcional. Los correos diarios se ejecutan en Supabase; verifica sus trabajos y la recepción por separado." />
     <section className="mb-5 grid gap-3 md:grid-cols-3" aria-label="Estadísticas de reportes">
       <Panel className="p-5"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><Archive size={16}/> Reportes archivados</p><p className="mt-2 text-2xl font-bold tabular-nums">{state.reports.length}</p></Panel>

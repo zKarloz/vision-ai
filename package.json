@@ -1,6 +1,6 @@
 {
   "name": "vision-ai",
-  "version": "1.9.0-stage7-quality",
+  "version": "1.9.1-stage7-product-cleanup",
   "private": true,
   "type": "module",
   "scripts": {
