@@ -1,6 +1,6 @@
 {
   "name": "vision-ai",
-  "version": "1.9.2-stage7-account-isolation",
+  "version": "1.9.3-stage7-release-assurance",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "test": "vitest run",
     "model:download": "node scripts/download-model.mjs",
     "assets:prepare": "node scripts/copy-ort-assets.mjs",
-    "postinstall": "node scripts/copy-ort-assets.mjs"
+    "postinstall": "node scripts/copy-ort-assets.mjs",
+    "audit:release": "node scripts/audit-release.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.12",

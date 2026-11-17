@@ -51,3 +51,16 @@ Si partes de un clon sin modelo, ejecuta también `npm run model:download`. En V
 - `docs/ARQUITECTURA.md`: límites y capas técnicas, navegabilidad, persistencia, autenticación e integridad.
 
 **Estado:** avance v1.9.2 de la etapa 7, **no cierre**. La etapa 6 permanece condicionada a la evidencia de la primera ejecución automática de Cron.
+
+
+### Auditoría previa al despliegue (etapa 7)
+
+Después de instalar dependencias y compilar, ejecutar:
+
+```bash
+npm run model:download
+npm run test && npm run typecheck && npm run build
+npm run audit:release
+```
+
+`audit:release` verifica el artefacto que se publicará (modelo ONNX con SHA-256, WASM de ONNX Runtime, rutas SPA, archivos `.env` y patrones conocidos de secretos). GitHub Actions ejecuta la misma revisión después del build. Este control **no mide la precisión ni el rendimiento de YOLO** y tampoco sustituye las pruebas de RLS de Supabase. Los protocolos de pruebas manuales y limitaciones están en `docs/GUIA_PRUEBAS_INTERNA.md`.

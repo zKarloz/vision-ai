@@ -35,3 +35,5 @@ jobs:
         run: npm run typecheck
       - name: Construir para Vercel
         run: npm run build
+      - name: Auditar recursos públicos y modelo ONNX
+        run: npm run audit:release

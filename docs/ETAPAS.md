@@ -411,3 +411,19 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 **Plan de aceptación v1.9.2:** respaldo del navegador → actualización incremental → `npm run test && npm run typecheck && npm run build` → login administrador → conservar cámaras, zonas, incidentes y reportes → confirmar sincronización Supabase → comprobar diálogos con Tab/Shift+Tab/Escape y diseño móvil → verificar GitHub Actions / Vercel.
 
 **Etapa 6 aún pendiente:** primera ejecución automática real de Supabase Cron confirmada en `cron.job_run_details`, trabajo remoto y correo del día correcto. El correo manual ya fue recibido, pero no equivale a la prueba programada.
+
+
+### Etapa 7 — v1.9.3: pruebas finales y verificación de despliegue (16/11/2026)
+
+**Base confirmada:** el usuario validó las siete pruebas funcionales de v1.9.2, incluyendo acceso, conservación de datos por cuenta, accesibilidad básica, YOLO y sincronización. Se conserva su configuración GitHub/Vercel/Supabase.
+
+- Se incorpora `npm run audit:release`, ejecutado en GitHub Actions tras `npm run build`: comprueba el HTML inicial, JavaScript de Vite, modelo ONNX con SHA-256, binarios WASM, fallback SPA y ausencia de secretos conocidos/.env en `dist`. El flujo CI descarga primero el modelo oficial verificado. **No realiza llamadas a Supabase ni Resend.**
+- El cursor de sincronización remota elimina IDs/firmas que el centro local ya no conserva. Así se evita crecimiento ilimitado de metadatos en sesiones largas; si reaparece una fila, el upsert idempotente remoto impide duplicarla. No cambia el contrato de la base de datos.
+- Pruebas nuevas: retención del cursor, restauración sin duplicados, recursos de despliegue ausentes, modelo alterado, filtración de secretos y rutas SPA. Las pruebas de navegador y el rendimiento real siguen siendo criterios manuales de cierre.
+- **Seguridad:** RLS/roles se deben verificar con cuentas de prueba reales en Supabase. Las pruebas unitarias no sustituyen una auditoría de permisos ni cifran `localStorage`. Evitar habilitar operadores/supervisores/auditores hasta definir RBAC.
+- **Rendimiento:** sección 8.3 del PDF fija objetivos *a medir* de alarma < 1,5 s y 5–15 FPS de análisis por cámara. No se afirma que se cumplan sin mediciones en Chrome con un dispositivo y fuente especificados; usar la guía interna de pruebas.
+- **Etapa 6:** envío real manual con Resend confirmado y dos tareas Cron activas; resta evidencia de la primera ejecución automática con `cron.job_run_details`, `vision_report_jobs` y correo recibido.
+
+**Criterio de cierre de etapa 7:** Vitest completo, TypeScript, build, auditoría de release, CI GitHub y despliegue Vercel en verde; pruebas manuales en 375/768/1280 px y zoom 200 %, flujo YOLO/alarma/reporte en navegador, sesión/RLS con cuenta alternativa y medición de rendimiento documentada; sin defectos críticos abiertos. Hasta esas verificaciones, v1.9.3 es un avance y no un cierre declarado.
+
+**Observación de rendimiento:** el selector vigente de 300/400/550 ms fija como máximo teórico a 300 ms aproximadamente 3,33 análisis/s para un solo flujo (menos con round-robin). Ese límite es inferior al objetivo 5–15 FPS/cámara del PDF; requiere registrar desviación o realizar una optimización posterior con datos reales, sin modificar el comportamiento validado a ciegas.

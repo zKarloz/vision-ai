@@ -46,10 +46,13 @@ export function planRemoteSync(payload: { incidents: RemoteIncidentRow[]; audit:
   });
   const existingAudit = new Set(checkpoint.audits);
   const audit = payload.audit.filter(row => !existingAudit.has(row.id));
-  const nextAudit = [...new Set([...checkpoint.audits, ...payload.audit.map(row => row.id)])];
+  // El centro local conserva una ventana finita de incidentes y auditorías.
+  // Mantener firmas de registros ya expulsados haría crecer el cursor para siempre.
+  // Una fila que reaparezca se enviará otra vez mediante upsert idempotente.
+  const currentAuditIds = [...new Set(payload.audit.map(row => row.id))];
   return {
     incidents, audit,
-    checkpoint: { version: 1, incidents: { ...checkpoint.incidents, ...signatures }, audits: nextAudit },
+    checkpoint: { version: 1, incidents: signatures, audits: currentAuditIds },
     pendingCount: incidents.length + audit.length,
   };
 }
