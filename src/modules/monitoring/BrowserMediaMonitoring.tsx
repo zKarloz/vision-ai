@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Panel } from '../../shared/components/Panel';
 import { StatusBadge } from '../../shared/components/StatusBadge';
 import { trackVisualState } from './trackVisualState';
+import { CAPTURE_INTERVAL_OPTIONS, captureIntervalLabel, isHighLoadCaptureInterval, parseCaptureIntervalMs } from './captureInterval';
 import { useBrowserMediaMonitoring } from './useBrowserMediaMonitoring';
 
 const control = 'rounded-xl border border-[var(--border)] bg-[var(--input)] px-3 py-2 text-sm text-[var(--text)]';
@@ -90,8 +91,13 @@ export function BrowserMediaMonitoring({ camera }: { camera: CameraRecord & { so
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <label className="text-xs font-semibold">Motor<select value={monitor.provider} onChange={event => monitor.setProvider(event.target.value as 'webgpu' | 'wasm')} disabled={monitor.modelState === 'ready' || monitor.modelState === 'loading'} className={`mt-1 block w-full ${control}`}><option value="webgpu">WebGPU</option><option value="wasm">WASM</option></select></label>
             <label className="text-xs font-semibold">Umbral<select value={monitor.threshold} onChange={event => monitor.setThreshold(Number(event.target.value))} className={`mt-1 block w-full ${control}`}><option value="0.25">25 %</option><option value="0.40">40 %</option><option value="0.60">60 %</option></select></label>
-            <label className="text-xs font-semibold">Captura<select value={monitor.intervalMs} onChange={event => monitor.setIntervalMs(Number(event.target.value) as 300 | 400 | 550)} className={`mt-1 block w-full ${control}`}><option value="300">300 ms</option><option value="400">400 ms</option><option value="550">550 ms</option></select></label>
+            <label className="text-xs font-semibold">Captura<select value={monitor.intervalMs} onChange={event => monitor.setIntervalMs(parseCaptureIntervalMs(event.target.value))} className={`mt-1 block w-full ${control}`}>{CAPTURE_INTERVAL_OPTIONS.map(ms => <option key={ms} value={ms}>{captureIntervalLabel(ms)}</option>)}</select></label>
           </div>
+          {isHighLoadCaptureInterval(monitor.intervalMs) && (
+            <p role="status" className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--warning-bg)] p-3 text-xs leading-5 text-[var(--warning)]">
+              Intervalo experimental de {monitor.intervalMs} ms: puede aumentar el consumo de GPU, la temperatura y la batería. Si notas calentamiento, cortes o inestabilidad, cambia a 75 ms o 100 ms. Los FPS reales dependen del equipo.
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {monitor.modelState === 'ready'
               ? <Button onClick={monitor.stopModel}><Square size={15}/> Detener YOLO</Button>

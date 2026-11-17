@@ -10,6 +10,12 @@ describe('FPS de análisis reciente al volver de una pestaña oculta', () => {
   it('mide ~1,67 FPS por cámara con alternancia de dos cámaras', () => {
     expect(recentAnalysisFps(timestamps(100, 700, 1300, 1900), 2000, 0, 300, 2)).toBeCloseTo(1.6667, 3);
   });
+  it('calcula 10 FPS ideales con muestras reales separadas 100 ms en una cámara', () => {
+    expect(recentAnalysisFps(timestamps(100, 200, 300, 400), 450, 0, 100, 1)).toBeCloseTo(10, 3);
+  });
+  it('calcula 5 FPS ideales por cámara con alternancia de dos cámaras a 100 ms', () => {
+    expect(recentAnalysisFps(timestamps(100, 300, 500, 700), 750, 0, 100, 2)).toBeCloseTo(5, 3);
+  });
   it('excluye muestras anteriores al retorno de la pestaña', () => {
     const samples = timestamps(100, 400, 700, 15_200, 15_500, 15_800);
     expect(recentAnalysisFps(samples, 15_900, 15_000, 300, 1)).toBeCloseTo(3.3333, 3);

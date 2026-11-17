@@ -13,6 +13,7 @@ import { BrowserMediaSource } from '../../infrastructure/video/BrowserMediaSourc
 import type { BrowserSourceKind } from '../../infrastructure/video/BrowserMediaSource';
 import { OnnxWorkerVisionEngine } from '../../infrastructure/vision/OnnxWorkerVisionEngine';
 import { recentAnalysisFps } from './analysisPerformance';
+import { DEFAULT_CAPTURE_INTERVAL_MS, type CaptureIntervalMs } from './captureInterval';
 
 interface AnalysisSample { atMs: number; inferenceMs: number; detections: number }
 type ModelState = 'idle' | 'loading' | 'ready' | 'error';
@@ -41,7 +42,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
   const [modelError, setModelError] = useState('');
   const [provider, setProvider] = useState<Provider>('webgpu');
   const [threshold, setThreshold] = useState(0.25);
-  const [intervalMs, setIntervalMs] = useState<300 | 400 | 550>(300);
+  const [intervalMs, setIntervalMs] = useState<CaptureIntervalMs>(DEFAULT_CAPTURE_INTERVAL_MS);
   const [pageVisible, setPageVisible] = useState(() => !document.hidden);
   const [foregroundSinceMs, setForegroundSinceMs] = useState(() => performance.now());
   const [detections, setDetections] = useState<Detection[]>([]);

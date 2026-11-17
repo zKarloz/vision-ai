@@ -427,3 +427,31 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 **Criterio de cierre de etapa 7:** Vitest completo, TypeScript, build, auditoría de release, CI GitHub y despliegue Vercel en verde; pruebas manuales en 375/768/1280 px y zoom 200 %, flujo YOLO/alarma/reporte en navegador, sesión/RLS con cuenta alternativa y medición de rendimiento documentada; sin defectos críticos abiertos. Hasta esas verificaciones, v1.9.3 es un avance y no un cierre declarado.
 
 **Observación de rendimiento:** el selector vigente de 300/400/550 ms fija como máximo teórico a 300 ms aproximadamente 3,33 análisis/s para un solo flujo (menos con round-robin). Ese límite es inferior al objetivo 5–15 FPS/cámara del PDF; requiere registrar desviación o realizar una optimización posterior con datos reales, sin modificar el comportamiento validado a ciegas.
+
+
+### Etapa 7 — Experimento de rendimiento: captura 100 ms (sobre v1.9.3)
+
+- El selector de Monitoreo, tanto para cámara virtual 3D como vídeo/webcam, comienza en **100 ms** y permite 150, 200, 300, 400 o 550 ms como alternativas de comparación o retroceso. No se cambia el modelo ONNX, su resolución, el Worker compartido ni las reglas de seguridad.
+- El planificador actual usa `setInterval` y un indicador de inferencia ocupada; **no lanza inferencias simultáneas**. Cuando un ciclo tarda más que 100 ms, se omiten intentos de captura mientras está ocupado. **100 ms no garantiza 10 FPS**: captura, render 3D, transferencia, inferencia y React tienen costos adicionales. Con dos cámaras, el máximo teórico ideal es 5 análisis/s por cámara; comprobar resultados reales.
+- **No es todavía un planificador adaptativo**. La intención es aislar primero el efecto de reducir el intervalo. Evitar prometer objetivo 5–15 FPS/cámara sin mediciones.
+- Protocolo: medir cámara única con 300 ms durante 30 s, cambiar a 100 ms y medir 30 s; repetir con todas las cámaras activas (mismas condiciones de WebGPU/escena). Anotar FPS recientes, promedio y último ciclo de inferencia, cantidad de cámaras, carga perceptible, detecciones, falsas alarmas y estabilidad. Volver a 300 ms si aparecen bloqueos o temperatura/consumo excesivos.
+- Los criterios `minFrames`/`exitFrames` operan en **fotogramas**, por lo que al capturar más frecuentemente las confirmaciones y cierres pueden ocurrir antes en tiempo real. Revisar si es necesario migrarlos a ventanas temporales en futuras iteraciones, conservando la protección ante pérdida de tracking.
+- Actualización incremental: únicamente `src/modules/monitoring/{captureInterval.ts,useVirtualMonitoring.ts,useBrowserMediaMonitoring.ts,VirtualMonitoringContent.tsx,BrowserMediaMonitoring.tsx}`, `tests/{captureIntervalStage7.test.ts,analysisPerformance.test.ts}` y esta documentación. No requiere migraciones ni variables nuevas.
+
+
+### Etapa 7 — Ensayo ampliado de captura a 75 y 60 ms (parche sobre v1.9.3 + 100 ms)
+
+- El selector ofrece ahora **60, 75, 100, 150, 200, 300, 400 y 550 ms** en los visores 3D, vídeo y webcam; el valor de inicio sigue siendo **100 ms**. Los dos intervalos nuevos se etiquetan como **alta carga** y muestran una advertencia contextual.
+- Se mantiene un solo Worker/modelo ONNX y el bloqueo de inferencia concurrente. `setInterval` solicita ciclos, pero omite los nuevos cuando la inferencia anterior no ha terminado: un periodo de 60 ms **no garantiza** 16,7 FPS globales ni una carga baja.
+- Una mayor frecuencia puede elevar el uso de GPU, temperatura y consumo de batería. Probar primero **75 ms** y después **60 ms** con las mismas cámaras y escena, durante 2–3 minutos, observando el Administrador de tareas, FPS recientes, latencia y falsas alarmas. Volver a 100–300 ms si aparecen cortes, ralentización, calor o pérdida de respuesta.
+- Los criterios de seguridad expresados en fotogramas (`minFrames`/`exitFrames`) cambian su duración efectiva cuando aumentan los FPS: evaluar las confirmaciones y los cierres antes de considerar estos intervalos como configuración estable. No se modifica el motor YOLO, el planificador, los umbrales ni Supabase/Resend.
+
+
+### Etapa 7 — Consolidación de intervalos medidos (parche posterior al ensayo 60/75 ms)
+
+- **Opciones actuales:** `60 ms` (máximo rendimiento), `75 ms` (equilibrado y predeterminado) y `100 ms` (menor carga). Se retiran del selector los intervalos históricos `150/200/300/400/550 ms`; las secciones anteriores conservan la cronología de los experimentos y quedan superadas por esta decisión.
+- **Datos reales con tres cámaras:** a 75 ms se registraron ~4,4 análisis/s por cámara, 40,3 ms de inferencia media y 37 % de GPU en una medición; a 60 y 75 ms el uso observado osciló entre 30–40 %, y a 100 ms entre 27–35 %. Temperatura informada: 45–50 °C en las tres configuraciones. Estas mediciones corresponden al equipo de prueba; no son garantías generales.
+- La versión usa un solo Worker ONNX, evita inferencias concurrentes y mantiene intactas las reglas de incidentes, zonas y auditoría. **No es aún un planificador adaptativo**; los intervalos son una frecuencia solicitada, no FPS garantizados.
+- Los valores antiguos/incorrectos que lleguen al parser vuelven a `75 ms`. Los hooks existentes inicializan su estado con `DEFAULT_CAPTURE_INTERVAL_MS` en los visores 3D y vídeo/webcam.
+- **Criterios de comprobación:** ejecutar Vitest, typecheck y build; verificar que los dos selectores presentan solo tres opciones; contrastar 60/75/100 ms con tres cámaras, uso sostenido de GPU, temperatura, pérdida de tracking y falsos incidentes. Al reducir la frecuencia relativa pueden variar las confirmaciones de reglas basadas en fotogramas.
+- El cambio afecta únicamente al selector, las etiquetas, mensajes de advertencia, pruebas del contrato de intervalos y esta documentación. No requiere cambios de Supabase, Resend, Cron o Vercel.

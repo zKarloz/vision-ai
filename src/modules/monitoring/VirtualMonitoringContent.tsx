@@ -11,6 +11,7 @@ import { validateImagePolygon, type ImagePoint } from '../../core/domain/spatial
 import { Button } from '../../shared/components/Button';
 import { Panel } from '../../shared/components/Panel';
 import { StatusBadge } from '../../shared/components/StatusBadge';
+import { CAPTURE_INTERVAL_OPTIONS, captureIntervalLabel, isHighLoadCaptureInterval, parseCaptureIntervalMs } from './captureInterval';
 import { useVirtualMonitoring } from './useVirtualMonitoring';
 import { trackVisualState } from './trackVisualState';
 
@@ -150,9 +151,14 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
               <select className={`mt-1 block w-full ${control}`} value={monitor.threshold} onChange={e => monitor.setThreshold(Number(e.target.value))}><option value="0.25">25 %</option><option value="0.40">40 %</option><option value="0.60">60 %</option></select>
             </label>
             <label className="text-[11px] font-semibold">Captura
-              <select className={`mt-1 block w-full ${control}`} value={monitor.intervalMs} onChange={e => monitor.setIntervalMs(Number(e.target.value) as 300 | 400 | 550)}><option value="300">300 ms</option><option value="400">400 ms</option><option value="550">550 ms</option></select>
+              <select className={`mt-1 block w-full ${control}`} value={monitor.intervalMs} onChange={e => monitor.setIntervalMs(parseCaptureIntervalMs(e.target.value))}>{CAPTURE_INTERVAL_OPTIONS.map(ms => <option key={ms} value={ms}>{captureIntervalLabel(ms)}</option>)}</select>
             </label>
           </div>
+          {isHighLoadCaptureInterval(monitor.intervalMs) && (
+            <p role="status" className="rounded-lg border border-[var(--border)] bg-[var(--warning-bg)] p-3 text-xs leading-5 text-[var(--warning)]">
+              Intervalo experimental de {monitor.intervalMs} ms: puede aumentar el consumo de GPU, la temperatura y la batería. Si notas calentamiento, cortes o inestabilidad, cambia a 75 ms o 100 ms. Los FPS reales dependen del equipo.
+            </p>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-xs text-[var(--muted)]"><Focus size={15}/> Zoom de captura
               <select aria-label="Zoom de captura" className={control} disabled={Boolean(monitor.zone)} title={monitor.zone ? 'Retira la zona antes de cambiar el zoom y vuelve a dibujarla' : undefined} value={monitor.zoom} onChange={e => monitor.setZoom(Number(e.target.value))}><option value="1">1.0×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.6">1.6×</option></select>

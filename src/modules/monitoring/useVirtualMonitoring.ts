@@ -13,6 +13,7 @@ import { SimulationWorld, type CameraId as WorldCameraId, type SimulationSnapsho
 import { OnnxWorkerVisionEngine } from '../../infrastructure/vision/OnnxWorkerVisionEngine';
 import { CameraRoundRobin, freshObservedCount, type AnalysisMode } from './cameraScheduler';
 import { recentAnalysisFps } from './analysisPerformance';
+import { DEFAULT_CAPTURE_INTERVAL_MS, type CaptureIntervalMs } from './captureInterval';
 
 export type CameraId = string;
 export type ModelState = 'idle' | 'loading' | 'ready' | 'error';
@@ -62,7 +63,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   const [modelError, setModelError] = useState('');
   const [provider, setProvider] = useState<Provider>('webgpu');
   const [threshold, setThreshold] = useState(0.25);
-  const [intervalMs, setIntervalMs] = useState<300 | 400 | 550>(300);
+  const [intervalMs, setIntervalMs] = useState<CaptureIntervalMs>(DEFAULT_CAPTURE_INTERVAL_MS);
   // Chrome limita timers y requestAnimationFrame en pestañas ocultas.
   const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || !document.hidden);
   const [foregroundSinceMs, setForegroundSinceMs] = useState(() => performance.now());
