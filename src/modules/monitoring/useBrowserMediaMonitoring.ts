@@ -35,6 +35,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
   const busyRef = useRef(false);
   const generationRef = useRef(0);
   const mountedRef = useRef(true);
+  const wasOnlineRef = useRef(false);
   const [sourceStatus, setSourceStatus] = useState<VideoSourceStatus>('stopped');
   const [sourceError, setSourceError] = useState('');
   const [fileName, setFileName] = useState('');
@@ -57,7 +58,8 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
   const rule = config.rules.find(r => r.zoneId === zone?.id && r.enabled && r.classId === 'person');
   const configSignature = JSON.stringify({ cameraId, zones: config.zones, rules: config.rules, threshold });
 
-  function clearObservations(): void {
+  function clearObservations(reason = 'Fuente de video reiniciada'): void {
+    incidentCenter.markMonitoringInterrupted([cameraId], reason);
     generationRef.current++;
     trackerRef.current.reset();
     incidentsRef.current.reset();
@@ -72,6 +74,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
     sourceRef.current = source;
     return () => {
       mountedRef.current = false;
+      incidentCenter.markMonitoringInterrupted([cameraId], 'Fuente de video desconectada o vista cerrada');
       generationRef.current++;
       source.dispose();
       if (sourceRef.current === source) sourceRef.current = null;
@@ -86,15 +89,18 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
       setPageVisible(visible);
       if (visible) setForegroundSinceMs(performance.now());
       else {
+        incidentCenter.markMonitoringInterrupted([cameraId], 'Pestaña oculta');
         generationRef.current++; // Descartar inferencias iniciadas antes de ocultar la pestaña.
+        trackerRef.current.reset(); incidentsRef.current.reset();
         setDetections([]); setTracks([]); setLastAtMs(null);
       }
     };
     document.addEventListener('visibilitychange', onChange);
     return () => document.removeEventListener('visibilitychange', onChange);
-  }, []);
+  }, [cameraId, incidentCenter]);
 
   useEffect(() => {
+    incidentCenter.markMonitoringInterrupted([cameraId], 'Cambio de regla, zona o umbral');
     generationRef.current++;
     trackerRef.current = new VisualZoneMonitor({
       ...DEFAULT_TRACKING_OPTIONS,
@@ -108,10 +114,21 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configSignature]);
 
+  // La webcam o el archivo pueden quedarse sin señal mientras el modelo sigue cargado.
+  useEffect(() => {
+    if (sourceStatus === 'online') wasOnlineRef.current = true;
+    else if (wasOnlineRef.current) {
+      incidentCenter.markMonitoringInterrupted([cameraId], 'Señal de video interrumpida');
+      trackerRef.current.reset(); incidentsRef.current.reset();
+      generationRef.current++;
+      wasOnlineRef.current = false;
+    }
+  }, [sourceStatus, cameraId, incidentCenter]);
+
   async function openFile(file: File): Promise<void> {
     const source = sourceRef.current;
     if (!source || sourceType !== 'video-loop') return;
-    clearObservations(); setSourceError(''); setFileName('');
+    clearObservations('Cambio de archivo de video'); setSourceError(''); setFileName('');
     try {
       await source.openVideo(file);
       if (sourceRef.current === source) setFileName(file.name);
@@ -123,7 +140,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
   async function openWebcam(): Promise<void> {
     const source = sourceRef.current;
     if (!source || sourceType !== 'webcam') return;
-    clearObservations(); setSourceError('');
+    clearObservations('Cambio de fuente webcam'); setSourceError('');
     try { await source.openWebcam(); }
     catch (error) {
       if (sourceRef.current === source) setSourceError(error instanceof Error ? error.message : String(error));
@@ -133,7 +150,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
   function disconnect(): void {
     sourceRef.current?.stop();
     setSourceError(''); setFileName('');
-    clearObservations();
+    clearObservations('Fuente desconectada');
   }
 
   async function initializeModel(): Promise<void> {
@@ -159,7 +176,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
     generationRef.current++;
     engineRef.current?.dispose(); engineRef.current = null;
     setModelState('idle'); setModelError('');
-    clearObservations();
+    clearObservations('YOLO detenido manualmente');
   }
 
   // La previsualización funciona incluso antes de cargar el modelo YOLO.
@@ -187,7 +204,12 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
       try {
         const canvas = scratchRef.current ?? document.createElement('canvas');
         if (!scratchRef.current) { canvas.width = 640; canvas.height = 480; scratchRef.current = canvas; }
-        if (!source.drawFrame(canvas)) return; // Pérdida de señal: NO inventar detecciones.
+        if (!source.drawFrame(canvas)) {
+          // Ausencia de fotograma válido: nunca interpretarla como zona vacía.
+          incidentCenter.markMonitoringInterrupted([cameraId], 'Fuente sin fotograma disponible');
+          trackerRef.current.reset(); incidentsRef.current.reset();
+          return;
+        }
         const frame = await createImageBitmap(canvas);
         if (!active || generation !== generationRef.current) { frame.close(); return; }
         const result = await engine.analyze(frame, threshold);
@@ -212,6 +234,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
         setIncidents(history.incidents); setLog(history.log);
       } catch (error) {
         if (active && engineRef.current === engine) {
+          incidentCenter.markMonitoringInterrupted([cameraId], 'Error de inferencia de video');
           setModelError(error instanceof Error ? error.message : String(error));
           setModelState('error');
           engine.dispose(); engineRef.current = null;

@@ -54,6 +54,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   const inferenceBusyRef = useRef(false);
   const generationRef = useRef(0);
   const mountedRef = useRef(true);
+  const monitoredCameraIdsRef = useRef<string[]>([]);
 
   const [cameraId, setCameraId] = useState<WorldCameraId>(initialCameraId);
   const [mode, setMode] = useState<AnalysisMode>('all');
@@ -78,10 +79,13 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     ? (config.zones.find(item => item.cameraId === cameraId && item.enabled && item.type === 'restricted') ?? null) : null;
   const virtualCameraIds = config.cameras.filter(camera => camera.sourceType === 'virtual-3d').map(camera => camera.id);
   const eligibleCameras = config.cameras.filter(camera => camera.sourceType === 'virtual-3d' && camera.enabled).map(camera => camera.id);
+  monitoredCameraIdsRef.current = mode === 'all' ? eligibleCameras : eligibleCameras.filter(id => id === cameraId);
   const poseSignature = JSON.stringify(config.cameras.filter(camera => camera.sourceType === 'virtual-3d')
     .map(camera => [camera.id, camera.virtualPose, camera.virtualSweep]));
 
-  function clearAnalysis(): void {
+  function clearAnalysis(reason = 'Reinicio de monitoreo 3D'): void {
+    // Invalidar y conservar en el centro cualquier intrusión aún sin cierre.
+    incidentCenter.markMonitoringInterrupted(undefined, reason);
     generationRef.current++;
     trackersRef.current = Object.fromEntries(virtualCameraIds.map(id => [id, new VisualZoneMonitor()]));
     incidentsRef.current.reset();
@@ -113,6 +117,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     observer?.observe(canvas);
     return () => {
       mountedRef.current = false;
+      incidentCenter.markMonitoringInterrupted(monitoredCameraIdsRef.current, 'Vista de monitoreo cerrada');
       observer?.disconnect();
       world.dispose();
       if (worldRef.current === world) worldRef.current = null;
@@ -139,8 +144,11 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
       setPageVisible(visible);
       if (visible) setForegroundSinceMs(performance.now());
       else {
-        // Invalidar cualquier inferencia que haya empezado antes de ocultar la pestaña.
+        // Una pestaña oculta deja de observar: ningún evento posterior equivale a una salida.
+        incidentCenter.markMonitoringInterrupted(monitoredCameraIdsRef.current, 'Pestaña oculta');
         generationRef.current++;
+        for (const tracker of Object.values(trackersRef.current)) tracker.reset();
+        incidentsRef.current.reset();
         // No mostrar cajas o conteos como si fuesen detecciones en directo.
         setAnalyses(previous => Object.fromEntries(Object.entries(previous).map(([id, state]) => [id, {
           ...state, tracks: [], detections: [], lastAtMs: null,
@@ -149,7 +157,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, []);
+  }, [incidentCenter]);
 
   // Una configuración, umbral o zoom nuevos requieren recalibrar el seguimiento.
   // Cambiar de cámara o alternar el modo NO elimina eventos de otras perspectivas.
@@ -158,6 +166,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     zones: config.zones, rules: config.rules, zoomByCamera, threshold,
   });
   useEffect(() => {
+    incidentCenter.markMonitoringInterrupted(undefined, 'Cambio de configuración/cámara/zona/umbral');
     generationRef.current++;
     for (const id of virtualCameraIds) {
       const restricted = config.zones.find(z => z.cameraId === id && z.enabled && z.type === 'restricted');
@@ -175,6 +184,28 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     // Importaciones/versiones nuevas se detectan por su contenido, no sólo por el número.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configSignature]);
+
+  // En modo «solo seleccionada», las cámaras restantes ya no están siendo observadas.
+  // No se altera la continuidad de las cámaras que permanecen activas.
+  const previousObservedRef = useRef<string[]>([]);
+  useEffect(() => {
+    const nowObserved = monitoredCameraIdsRef.current;
+    if (modelState === 'ready' && pageVisible) {
+      const removed = previousObservedRef.current.filter(id => !nowObserved.includes(id));
+      if (removed.length) {
+        incidentCenter.markMonitoringInterrupted(removed, 'Cámara excluida del muestreo');
+        for (const id of removed) {
+          trackersRef.current[id]?.reset();
+          incidentsRef.current.forgetCamera(id);
+        }
+        setAnalyses(previous => Object.fromEntries(Object.entries(previous).map(([id, value]) =>
+          [id, removed.includes(id) ? emptyAnalysis() : value])));
+        const history = incidentsRef.current.snapshot();
+        setIncidents(history.incidents); setLog(history.log);
+      }
+      previousObservedRef.current = nowObserved;
+    } else previousObservedRef.current = [];
+  }, [mode, cameraId, modelState, pageVisible, poseSignature, incidentCenter]);
 
   // Previsualización sin IA: siempre corresponde a la cámara seleccionada.
   useEffect(() => {
@@ -251,6 +282,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
         setIncidents(history.incidents); setLog(history.log);
       } catch (error) {
         if (active && engineRef.current === engine) {
+          incidentCenter.markMonitoringInterrupted(monitoredCameraIdsRef.current, 'Error de inferencia 3D');
           setModelError(error instanceof Error ? error.message : 'Error inesperado de inferencia.');
           setModelState('error');
           engine.dispose();
@@ -288,7 +320,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   function stopModel(): void {
     engineRef.current?.dispose(); engineRef.current = null;
     setModelState('idle'); setModelError('');
-    clearAnalysis();
+    clearAnalysis('YOLO detenido manualmente');
   }
 
   function setZonePoints(id: WorldCameraId, points: ImagePoint[]): string | null {
@@ -336,6 +368,6 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     tracks: showSelectedTracks ? visible.tracks : [], samples, analyses,
     incidents, log, inferenceTotalMs: visible.inferenceTotalMs, fps, averageMs,
     setRunning: (running: boolean) => worldRef.current?.setRunning(running),
-    resetWorld: () => { worldRef.current?.reset(); clearAnalysis(); },
+    resetWorld: () => { worldRef.current?.reset(); clearAnalysis('Escenario 3D reiniciado'); },
   };
 }

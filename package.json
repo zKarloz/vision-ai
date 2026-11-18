@@ -1,6 +1,6 @@
 {
   "name": "vision-ai",
-  "version": "1.9.3-stage7-release-assurance",
+  "version": "1.9.4-stage7-monitoring-continuity",
   "private": true,
   "type": "module",
   "scripts": {

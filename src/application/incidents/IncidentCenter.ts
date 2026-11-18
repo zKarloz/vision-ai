@@ -16,6 +16,13 @@ export interface CenterIncident extends Incident {
   sourceKey: string;
   closureType?: 'yolo-confirmed' | 'human-review';
   closingNote?: string;
+  /** La observación de esta intrusión se interrumpió: la identidad ya no es verificable. */
+  observationInterruptedAt?: string;
+  observationReason?: string;
+  /** Nueva trayectoria relacionada de forma provisional, sin afirmar identidad personal. */
+  recoverySourceKey?: string;
+  /** Una salida tras reanudar NO acredita la salida del track original. */
+  recoveryExitObservedAt?: string;
 }
 export interface IncidentCenterState {
   incidents: CenterIncident[];
@@ -107,6 +114,46 @@ export class IncidentCenter {
     return { ...state, audit: [event, ...state.audit].slice(0, MAX_AUDIT), auditSequence: state.auditSequence + 1 };
   }
 
+  /**
+   * Una interrupción destruye la continuidad del seguimiento, NO cierra el incidente.
+   * Usamos `tracking-lost` en la auditoría remota existente y una nota diferenciada,
+   * evitando migraciones SQL y sin inventar una salida del trabajador.
+   * Omitir cameraIds marca todas las cámaras (p. ej. al restaurar una sesión).
+   */
+  markMonitoringInterrupted(
+    cameraIds?: readonly string[],
+    reason = 'Monitoreo interrumpido',
+    at = new Date().toISOString(),
+  ): void {
+    if (!Number.isFinite(Date.parse(at))) return;
+    const cameras = cameraIds ? new Set(cameraIds) : null;
+    let next = this.state;
+    let changed = false;
+    for (const incident of this.state.incidents) {
+      if (incident.status === 'closed' || incident.observationInterruptedAt ||
+        (cameras && !cameras.has(incident.cameraId)) || Date.parse(at) < Date.parse(incident.openedAt)) continue;
+      const updated: CenterIncident = { ...incident, requiresReview: true,
+        observationInterruptedAt: at, observationReason: reason };
+      next = { ...next, incidents: next.incidents.map(item => item.id === incident.id ? updated : item) };
+      next = this.auditFor(next, updated, 'tracking-lost', at, 'Sistema', `Observación interrumpida: ${reason}`);
+      changed = true;
+    }
+    if (changed) this.publish(next);
+  }
+
+  /**
+   * La primera trayectoria reabierta en la misma cámara/zona puede representar el
+   * incidente anterior. Se asocia provisionalmente solo cuando hay un candidato
+   * único y nunca se permite que esa trayectoria cierre el incidente original.
+   * Con múltiples candidatos se mantiene la incertidumbre y no se fusionan personas.
+   */
+  private recoveryCandidate(state: IncidentCenterState, source: Incident, sourceKey: string): CenterIncident | null {
+    const candidates = state.incidents.filter(item => item.status !== 'closed' &&
+      item.observationInterruptedAt && !item.recoverySourceKey && item.sourceKey !== sourceKey &&
+      item.cameraId === source.cameraId && item.zoneId === source.zoneId && item.ruleId === source.ruleId);
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
   /** Idempotente: recibir el mismo snapshot en cada fotograma no duplica eventos. */
   ingest(snapshot: readonly Incident[]): void {
     let next = this.state;
@@ -115,8 +162,20 @@ export class IncidentCenter {
       if (source.source !== 'yolo' || !source.cameraId || !source.zoneId || !source.trackId ||
         !Number.isFinite(Date.parse(source.openedAt))) continue;
       const sourceKey = [source.cameraId, source.zoneId, source.ruleId, source.trackId, source.openedAt].join('|');
-      const index = next.incidents.findIndex(entry => entry.sourceKey === sourceKey);
-      if (index < 0) {
+      const current = next.incidents.find(entry => entry.sourceKey === sourceKey || entry.recoverySourceKey === sourceKey);
+      if (!current) {
+        const recovering = this.recoveryCandidate(next, source, sourceKey);
+        if (recovering) {
+          const updated: CenterIncident = { ...recovering, recoverySourceKey: sourceKey, requiresReview: true,
+            ...(source.status === 'closed' && source.closedAt ? { recoveryExitObservedAt: source.closedAt } : {}) };
+          next = { ...next, incidents: next.incidents.map(entry => entry.id === recovering.id ? updated : entry) };
+          const note = source.status === 'closed'
+            ? 'Trayectoria posterior a la interrupción: salida observada, identidad y continuidad NO verificadas.'
+            : 'Trayectoria posterior a la interrupción: asociación provisional, identidad NO verificada.';
+          next = this.auditFor(next, updated, 'tracking-lost', source.closedAt ?? source.openedAt, 'Sistema', note);
+          changed = true;
+          continue;
+        }
         const incident: CenterIncident = { ...source, id: `INC-${String(next.sequence).padStart(6, '0')}`, sourceKey };
         next = { ...next, incidents: [incident, ...next.incidents].slice(0, MAX_INCIDENTS), sequence: next.sequence + 1 };
         next = this.auditFor(next, incident, 'opened', incident.openedAt, 'YOLO');
@@ -128,14 +187,23 @@ export class IncidentCenter {
         }
         continue;
       }
-      const current = next.incidents[index];
-      if (current.status === 'closed') continue; // El cierre confirmado/manual es definitivo.
+      if (current.status === 'closed') continue; // Cierre confirmado/manual es definitivo.
       let updated = current;
       if (source.status === 'closed' && source.closedAt) {
-        try {
-          updated = { ...transitionIncident(current, { action: 'close', at: source.closedAt }), sourceKey: current.sourceKey, closureType: 'yolo-confirmed' };
-          next = this.auditFor(next, updated, 'closed', source.closedAt, 'YOLO');
-        } catch { /* Fechas no válidas no alteran el historial. */ }
+        if (current.observationInterruptedAt) {
+          // No es seguro cerrar después de perder la identidad de seguimiento.
+          if (!current.recoveryExitObservedAt) {
+            updated = { ...current, recoveryExitObservedAt: source.closedAt, requiresReview: true };
+            next = this.auditFor(next, updated, 'tracking-lost', source.closedAt, 'Sistema',
+              'Salida tras interrupción observada; requiere cierre por revisión humana.');
+          }
+        } else {
+          try {
+            updated = { ...transitionIncident(current, { action: 'close', at: source.closedAt }),
+              sourceKey: current.sourceKey, closureType: 'yolo-confirmed' };
+            next = this.auditFor(next, updated, 'closed', source.closedAt, 'YOLO');
+          } catch { /* Fechas no válidas no alteran el historial. */ }
+        }
       } else if (source.requiresReview && !current.requiresReview) {
         updated = { ...current, requiresReview: true };
         next = this.auditFor(next, updated, 'tracking-lost', new Date().toISOString(), 'YOLO');

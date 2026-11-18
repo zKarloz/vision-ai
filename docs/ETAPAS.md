@@ -455,3 +455,29 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 - Los valores antiguos/incorrectos que lleguen al parser vuelven a `75 ms`. Los hooks existentes inicializan su estado con `DEFAULT_CAPTURE_INTERVAL_MS` en los visores 3D y vídeo/webcam.
 - **Criterios de comprobación:** ejecutar Vitest, typecheck y build; verificar que los dos selectores presentan solo tres opciones; contrastar 60/75/100 ms con tres cámaras, uso sostenido de GPU, temperatura, pérdida de tracking y falsos incidentes. Al reducir la frecuencia relativa pueden variar las confirmaciones de reglas basadas en fotogramas.
 - El cambio afecta únicamente al selector, las etiquetas, mensajes de advertencia, pruebas del contrato de intervalos y esta documentación. No requiere cambios de Supabase, Resend, Cron o Vercel.
+
+
+### Etapa 7 — v1.9.4: continuidad ante interrupción de monitoreo (17/11/2026)
+
+**Motivo:** la v1.9.3 conservaba incidentes persistidos al detener YOLO, pero reiniciaba la memoria del tracker/coordinador. Al volver con una persona dentro de la zona podía crear otro incidente, y un incidente antiguo sin observación de salida quedaba sin trazabilidad de la interrupción.
+
+**Cambios:**
+- `IncidentCenter.markMonitoringInterrupted(cameraIds, reason)` registra en el incidente **requiere revisión** y el momento/motivo de la interrupción; conserva el estado abierto, reconocido o escalado. El historial se sincroniza con Supabase usando `requires_review` y la acción existente `tracking-lost` con nota específica (sin migraciones SQL). Es idempotente.
+- Se marca interrupción al detener YOLO, cambiar configuración, ocultar pestaña, salir del visor, cambiar a modo de cámara seleccionada, desconectar/alterar fuente, perder fotogramas o encontrar error de inferencia. Los trackers se reinician cuando se pierde la continuidad de la observación. La recarga marca como interrumpidos los incidentes locales que seguían abiertos. Al excluir una cámara del modo multicámara se descartan únicamente sus tracks efímeros y cooldowns de regla, conservando los de las cámaras todavía activas.
+- Tras reanudar, una nueva trayectoria **no identifica a la misma persona**. Cuando hay exactamente un incidente interrumpido de la misma cámara/zona/regla, se asocia como observación provisional y no se crea otra apertura por ese primer track. **Nunca** se cierra el caso anterior por la salida de una trayectoria posterior a la interrupción; se registra la nueva observación y se exige reconocimiento y cierre manual con nota. No se infieren salidas durante ausencia de señal.
+- Si hay varias personas previas compatibles, no se fusionan sus identidades sin evidencia: los nuevos incidentes son independientes. Si aparece una segunda trayectoria después de la primera correlación, genera un incidente distinto. Correlación por zona **no equivale a identificación personal** y puede requerir intervención de supervisor.
+- El módulo Incidentes muestra «Observación interrumpida · revisión obligatoria» y una indicación de salida posterior no verificada. El reporte diario solo incluye cierres reales; una interrupción no genera un reporte de incidente cerrado.
+- **Sin alteraciones** de modelos ONNX, umbrales, confirmación de cuadros, intervalos 60/75/100 ms, roles, políticas RLS, secretos ni funciones de envío. El cierre automático por salida continua observada sigue funcionando normalmente.
+
+**Pruebas nuevas:** `tests/monitoringContinuityStage7.test.ts` cubre pausa idempotente, selección por cámara, zona vacía tras pausa, nuevo track asociado sin duplicar, cierre bloqueado tras pausa, cierre manual auditado, cierre normal continuo, múltiples personas sin fusiones, recarga con historial, sincronización remota y escalamiento. Los casos no generan YOLO simulado en la aplicación; validan exclusivamente el contrato estructurado del seguimiento.
+
+**Validación en Chrome (pendiente):** abrir incidente mediante YOLO real → detener modelo → dejar salir a persona → reiniciar → comprobar que no se cierra ni se duplica → reconocer y cerrar con nota → ver auditoría en local y Supabase; repetir con una persona aún dentro, pérdida de webcam, pestaña oculta y modo cámara seleccionada. Ejecutar `npm run test && npm run typecheck && npm run build` y verificar CI/Vercel antes de aprobar.
+
+
+### Etapa 7 — Refinamiento de navegación: pestañas de Incidentes y Reportes (v1.9.4, ajuste de interfaz)
+
+- **Incidentes:** dos pestañas, «Incidentes» y «Auditoría de acciones»; las tres tarjetas de resumen (pendientes de reconocer, sin cierre y cerrados) y el estado de alarma siguen visibles en ambas. Se mantienen filtros, paginación, exportación y modales de reconocimiento/cierre.
+- **Reportes:** tres pestañas, «Operación y sincronización» (simulación de cierre diario, envío al administrador y Supabase), «Informes generados» y «Auditoría de reportes». Las tarjetas generales de reportes permanecen visibles. Los avisos de generación/descarga aparecen por encima de las pestañas para ser visibles desde cualquier sección.
+- Se incorpora el componente compartido `Tabs`, con semántica `tablist` / `tab` / `tabpanel`, control con flechas izquierda/derecha, `Home`/`End`, foco visible y barra horizontal desplazable en pantallas pequeñas; los paneles inactivos no montan tablas ni lógica innecesaria.
+- **Sin cambios funcionales** en inferencia YOLO, estados de incidentes, persistencia, sincronización automática, permisos RLS, Resend ni Cron. Esta es una mejora de presentación, no un nuevo cierre de etapa.
+- Validación: `npm run test && npm run typecheck && npm run build`, comprobar tabs con ratón y teclado, filtros y tablas paginadas, las tres tarjetas persistentes y visualización móvil/tema oscuro.

@@ -34,6 +34,8 @@ export function IncidentCenterProvider({ children }: { children: ReactNode }) {
   }, [soundEnabled, alarmRequired]);
 
   useEffect(() => {
+    // Tras recargar/cerrar la pestaña no tenemos continuidad visual de los tracks.
+    center.markMonitoringInterrupted(undefined, 'Inicio de nueva sesión sin continuidad de tracking');
     const interval = window.setInterval(() => center.escalateOverdue(), 5000);
     center.escalateOverdue();
     return () => window.clearInterval(interval);

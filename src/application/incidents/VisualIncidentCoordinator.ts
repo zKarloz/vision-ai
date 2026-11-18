@@ -54,6 +54,16 @@ export class VisualIncidentCoordinator {
     return { incidents: this.incidents.map(item => ({ ...item })), log: this.log.map(item => ({ ...item })) };
   }
 
+  /**
+   * Dejar de muestrear una cámara destruye su seguimiento temporal, pero NO
+   * afecta a otras cámaras ni a los incidentes persistidos en IncidentCenter.
+   */
+  forgetCamera(cameraId: string): void {
+    this.rules.resetCamera(cameraId);
+    this.incidents = this.incidents.filter(item => item.cameraId !== cameraId);
+    this.log = this.log.filter(item => item.cameraId !== cameraId);
+  }
+
   /** Sesión efímera; no borra datos de otros repositorios. */
   reset(): void {
     this.rules.reset();

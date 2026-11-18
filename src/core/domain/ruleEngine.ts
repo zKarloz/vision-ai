@@ -27,5 +27,12 @@ export class RuleEngine {
     return true;
   }
 
+  /** Reinicia el cooldown únicamente de la cámara cuyo seguimiento se perdió. */
+  resetCamera(cameraId: string): void {
+    for (const key of this.lastEmitted.keys()) {
+      if (key.split('|')[1] === cameraId) this.lastEmitted.delete(key);
+    }
+  }
+
   reset(): void { this.lastEmitted.clear(); }
 }
