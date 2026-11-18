@@ -500,3 +500,11 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 - Se eliminaron tamaños de página específicos de Incidentes y Reportes. Las tablas de Cámaras y Configuración también usan el mismo componente.
 - No se alteraron YOLO, reglas de incidentes, sincronización Supabase ni la programación Resend/Cron.
 - Verificar en Chrome transiciones de alarma, botones de paginación en todas las pestañas, teclado, tema oscuro y móvil.
+
+
+### Ajuste visual v1.9.4 — tablas y filtros (2026-11-17)
+
+- `DataTable` conserva selector compartido de 5/10/20 registros, paginación y conteo de páginas, pero ya no muestra la leyenda redundante «Mostrando X–Y de Z».
+- En Cámaras, la búsqueda se sitúa a la izquierda del filtro de fuente en escritorio; ambos se apilan sin desbordamiento en móviles.
+- Los `<select>` de tarjetas, filtros y formularios comparten una flecha con 0.9 rem de separación desde el extremo derecho y espacio reservado para el texto, adaptada a temas claro y oscuro.
+- No se modifican detección YOLO, reglas, alarmas, persistencia ni integraciones remotas.

@@ -20,14 +20,17 @@ describe('Selector compartido de registros paginados', () => {
   it('muestra cinco registros inicialmente en cualquier instancia de DataTable', () => {
     const markup = renderToStaticMarkup(<DataTable accessibleName="Registros" rows={rows} columns={columns} getRowKey={row => row.id}/>);
     expect((markup.match(/<td\b/g) ?? [])).toHaveLength(5);
-    expect(markup).toContain('Mostrando 1–5 de 23');
+    expect(markup).not.toContain('Mostrando');
     expect(markup).toContain('Página 1 de 5');
     expect(markup).toContain('Registros por página');
   });
 
   it('mantiene el selector visible en tablas vacías', () => {
     const markup = renderToStaticMarkup(<DataTable rows={[]} columns={columns} getRowKey={(row: Item) => row.id}/>);
-    expect(markup).toContain('0 registros');
+    // Verifica que no reaparezca la antigua leyenda de rangos;
+    // '0 registros' también está presente en 'Mostrar 20 registros por página'.
+    expect(markup).not.toContain('Mostrando');
+    expect(markup).toContain('Sin registros');
     expect(markup).toContain('Mostrar 20 registros por página');
   });
 });

@@ -81,6 +81,21 @@ button, input, select, textarea { font: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [role="region"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 ::selection { background: var(--notice-border); }
 
+/* Desplegables en tarjetas, filtros y formularios: flecha con margen interior
+   uniforme, sin depender de la apariencia nativa de cada navegador. */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 2.75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371808d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.9rem center;
+  background-size: 1rem;
+  background-repeat: no-repeat;
+}
+:root[data-theme="dark"] select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ababab' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 /* Notificación de alarma: baja suavemente al entrar y asciende al salir.
    La salida se completa antes de desmontar el componente de React. */
 @keyframes alarm-slide-down {

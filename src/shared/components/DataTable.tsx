@@ -42,10 +42,7 @@ export function DataTable<T>({ rows, columns, getRowKey, emptyMessage = 'No hay 
       {rows.length === 0 && <EmptyState title="Sin registros" description={emptyMessage} />}
     </div>
     <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3 sm:px-5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <PageSizeSelector value={pageSize} onChange={changePageSize}/>
-        <p className="text-xs text-[var(--muted)]" aria-live="polite">{rows.length === 0 ? '0 registros' : `Mostrando ${(current - 1) * pageSize + 1}–${Math.min(current * pageSize, rows.length)} de ${rows.length}`}</p>
-      </div>
+      <PageSizeSelector value={pageSize} onChange={changePageSize}/>
       <div className="flex items-center gap-2"><span className="mr-1 text-xs text-[var(--muted)]">Página {current} de {pages}</span><Button size="sm" aria-label="Página anterior" disabled={current <= 1} onClick={() => setPage(current - 1)}><ChevronLeft size={15}/></Button><Button size="sm" aria-label="Página siguiente" disabled={current >= pages} onClick={() => setPage(current + 1)}><ChevronRight size={15}/></Button></div>
     </footer>
   </div>;

@@ -71,7 +71,23 @@ export function CamerasPage() {
     <div className="mb-5 flex items-start gap-3 rounded-xl border border-[var(--notice-border)] bg-[var(--notice-bg)] p-4 text-sm"><CircleHelp className="mt-0.5 shrink-0 text-[var(--accent)]" size={19} /><p className="leading-relaxed text-[var(--muted)]">Registra una fuente «Vídeo en bucle» o «Webcam», pulsa «Conectar en Monitoreo» y selecciona el archivo o concede permiso. El archivo y la webcam son locales de la sesión; su contenido no se persiste. Se recomienda una cámara 3D fija: ajusta la vista visualmente y dibuja sus zonas en Monitoreo. El barrido permanece como opción avanzada sin evaluación de zonas. IP/RTSP sigue pendiente.</p></div>
     {notice && <div role="status" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm"><span>{notice}</span><button className="text-xs font-bold text-[var(--accent)]" onClick={() => setNotice('')}>Cerrar</button></div>}
     <Panel className="overflow-hidden">
-      <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between"><div><h2 className="font-bold">Fuentes registradas</h2><p className="mt-1 text-xs text-[var(--muted)]">{cameras.length} registros locales, {results.length} según filtros</p></div><div className="flex flex-wrap gap-2"><label className="relative flex-1 sm:flex-none"><Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" /><input className={`${fieldClass} min-w-[210px] pl-9`} placeholder="Buscar cámara…" aria-label="Buscar cámaras" value={search} onChange={(event) => setSearch(event.target.value)} /></label><select aria-label="Filtrar por fuente" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)} className={fieldClass}><option value="all">Todas las fuentes</option>{CAMERA_SOURCE_TYPES.map((source) => <option value={source} key={source}>{SOURCE_NAMES[source]}</option>)}</select></div></div>
+      <div className="flex flex-col gap-3 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="font-bold">Fuentes registradas</h2>
+          <p className="mt-1 text-xs text-[var(--muted)]">{cameras.length} registros locales, {results.length} según filtros</p>
+        </div>
+        {/* En escritorio, búsqueda a la izquierda y filtro de origen a la derecha. */}
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
+          <label className="relative block w-full sm:w-56 sm:shrink-0">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            <input className={`${fieldClass} pl-9`} placeholder="Buscar cámara…" aria-label="Buscar cámaras" value={search} onChange={(event) => setSearch(event.target.value)} />
+          </label>
+          <select aria-label="Filtrar por fuente" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)} className={`${fieldClass} sm:w-52 sm:shrink-0`}>
+            <option value="all">Todas las fuentes</option>
+            {CAMERA_SOURCE_TYPES.map((source) => <option value={source} key={source}>{SOURCE_NAMES[source]}</option>)}
+          </select>
+        </div>
+      </div>
       <DataTable accessibleName="Registro de cámaras" rows={results} columns={columns} getRowKey={(camera) => camera.id} emptyMessage="Ninguna cámara coincide. Prueba otro filtro o crea un registro nuevo." />
     </Panel>
     <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]"><Activity size={15} /><span>Todas las cámaras 3D comparten un mundo. Las dos perspectivas semilla CAM-01/02 se pueden editar, pero no eliminar.</span><Link to="/monitoreo" className="inline-flex items-center gap-1 font-semibold text-[var(--accent)] hover:underline">Abrir monitoreo <ExternalLink size={13} /></Link></div>
