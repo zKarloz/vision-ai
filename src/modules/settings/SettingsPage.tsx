@@ -1,15 +1,17 @@
 import { useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Database, Download, FileJson2, History, Moon, RotateCcw, Sun, Upload } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Database, Download, FileJson2, History, Moon, RotateCcw, Sun, Upload, SlidersHorizontal, ClipboardList } from 'lucide-react';
 import { useCameraRegistry } from '../../app/providers/CameraRegistryProvider';
 import { useTheme } from '../../app/providers/ThemeProvider';
 import { ConfigValidationError, validateConfig, type ConfigSnapshot } from '../../application/config/configSchema';
 import type { ConfigAudit, ConfigVersion } from '../../infrastructure/config/VersionedLocalConfigRepository';
+import { AlarmStatusBar } from '../../shared/components/AlarmStatusBar';
 import { Button } from '../../shared/components/Button';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataTable, type TableColumn } from '../../shared/components/DataTable';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { StatusBadge } from '../../shared/components/StatusBadge';
+import { Tabs } from '../../shared/components/Tabs';
 
 const MAX_FILE_BYTES = 256 * 1024;
 const field = 'w-full rounded-lg border border-[var(--border)] bg-[var(--input)] px-3 py-2 text-sm';
@@ -22,7 +24,7 @@ function downloadJson(filename: string, json: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-/** Etapa 3: importación de configuración con validación previa, historial y reversión. */
+/** Configuración versionada: edición operativa y tablas de historial en pestañas independientes. */
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { config, configState, importConfig, rollbackConfig, exportConfig } = useCameraRegistry();
@@ -87,6 +89,10 @@ export function SettingsPage() {
   return <>
     <PageHeader title="Configuración y carga de datos"
       description="Importa y exporta cámaras, zonas y reglas. Las versiones se validan, publican íntegramente y pueden revertirse." />
+    <Tabs label="Secciones de configuración" items={[
+      { id: 'general', label: 'General', icon: SlidersHorizontal, content: (
+        <>
+          <AlarmStatusBar variant="settings"/>
     <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
       <Panel className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 text-sm font-bold"><Database size={18}/> Configuración activa</h2><p className="mt-1 text-xs text-[var(--muted)]">Persistencia local versionada · modo académico</p></div><StatusBadge tone="success"><CheckCircle2 size={12}/> v{active.number}</StatusBadge></div>
@@ -96,7 +102,7 @@ export function SettingsPage() {
         <p className="mt-4 break-all text-[11px] text-[var(--muted)]">Huella de contenido FNV-1a (no criptográfica): <code>{active.checksum}</code></p>
         <div className="mt-5 flex flex-wrap gap-2"><Button variant="primary" onClick={() => downloadJson(`vision-ai-config-v${active.number}.json`, exportConfig())}><Download size={15}/> Exportar configuración</Button><a className="inline-flex items-center rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold hover:bg-[var(--muted-bg)]" href="/examples/vision-ai-config-valid.json" download>Ejemplo válido</a><a className="inline-flex items-center rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold hover:bg-[var(--muted-bg)]" href="/examples/vision-ai-config-invalid.json" download>Ejemplo inválido</a></div>
       </Panel>
-      <Panel className="p-5"><h2 className="flex items-center gap-2 text-sm font-bold"><Sun size={18}/> Apariencia</h2><p className="mt-1 text-xs text-[var(--muted)]">Tema claro predeterminado y oscuro en escala de grises.</p><div className="mt-5 flex flex-wrap gap-2"><Button variant={theme === 'light' ? 'primary' : 'secondary'} onClick={() => setTheme('light')}><Sun size={15}/> Claro</Button><Button variant={theme === 'dark' ? 'primary' : 'secondary'} onClick={() => setTheme('dark')}><Moon size={15}/> Oscuro</Button></div><p className="mt-5 text-xs leading-5 text-[var(--muted)]">Supabase no está conectado: esta versión guarda los datos localmente en tu navegador. La migración SQL incluida prepara el almacenamiento remoto, que requiere credenciales y autenticación.</p></Panel>
+      <Panel className="p-5"><h2 className="flex items-center gap-2 text-sm font-bold"><Sun size={18}/> Apariencia</h2><p className="mt-1 text-xs text-[var(--muted)]">Tema claro predeterminado y oscuro en escala de grises.</p><div className="mt-5 flex flex-wrap gap-2"><Button variant={theme === 'light' ? 'primary' : 'secondary'} onClick={() => setTheme('light')}><Sun size={15}/> Claro</Button><Button variant={theme === 'dark' ? 'primary' : 'secondary'} onClick={() => setTheme('dark')}><Moon size={15}/> Oscuro</Button></div><p className="mt-5 text-xs leading-5 text-[var(--muted)]">La configuración de cámaras, zonas y reglas se guarda localmente por cuenta. Los incidentes y su auditoría se sincronizan con Supabase cuando hay conexión.</p></Panel>
       <Panel className="p-5 xl:col-span-2"><h2 className="flex items-center gap-2 text-sm font-bold"><Upload size={18}/> Importar JSON</h2>
         <p className="mt-2 text-xs leading-5 text-[var(--muted)]">UTF-8, máximo 256 KiB. Se comprueban los tipos, identificadores únicos, referencias y polígonos. Una importación inválida no modifica la versión activa.</p>
         <div className="mt-4 flex flex-wrap items-center gap-3"><input ref={fileInput} aria-label="Archivo de configuración JSON" className={field} type="file" accept=".json,application/json" onChange={e => {void readFile(e.target.files?.[0]);}} />{candidate && <Button variant="primary" onClick={confirmImport}><FileJson2 size={15}/> Confirmar importación</Button>}</div>
@@ -104,9 +110,16 @@ export function SettingsPage() {
         {issues.length > 0 && <div className="mt-3 rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-bg)] p-4 text-xs text-[var(--danger)]" role="alert"><p className="mb-2 flex items-center gap-2 font-semibold"><AlertTriangle size={15}/> Se rechazó la carga</p><ul className="list-disc space-y-1 pl-4">{issues.slice(0, 20).map((message, index) => <li key={index}>{message}</li>)}</ul>{issues.length > 20 && <p>Y {issues.length-20} errores más.</p>}</div>}
         {notice && <p className="mt-3 rounded-lg bg-[var(--muted-bg)] p-3 text-xs" role="status">{notice}</p>}
       </Panel>
-      <Panel className="overflow-hidden xl:col-span-2"><div className="border-b border-[var(--border)] p-5"><h2 className="flex items-center gap-2 text-sm font-bold"><History size={18}/> Historial de versiones</h2><p className="mt-1 text-xs text-[var(--muted)]">Se conservan las últimas 20 versiones. Revertir crea una versión nueva y auditable.</p></div><DataTable accessibleName="Versiones de configuración" rows={[...configState.versions].reverse()} columns={versions} getRowKey={row => String(row.number)} emptyMessage="Aún no hay versiones." /></Panel>
-      <Panel className="overflow-hidden xl:col-span-2"><div className="border-b border-[var(--border)] p-5"><h2 className="flex items-center gap-2 text-sm font-bold">Auditoría local</h2><p className="mt-1 text-xs text-[var(--muted)]">Identidad de prueba, no autenticada. Se conservan las últimas 100 acciones.</p></div><DataTable accessibleName="Auditoría de configuración" rows={[...configState.audit].reverse()} columns={audits} getRowKey={row => String(row.id)} emptyMessage="Aún no hay registros de auditoría." /></Panel>
     </div>
+        </>
+      ) },
+      { id: 'versiones', label: 'Historial de versiones', icon: History, count: configState.versions.length, content: (
+      <Panel className="overflow-hidden"><div className="border-b border-[var(--border)] p-5"><h2 className="flex items-center gap-2 text-sm font-bold"><History size={18}/> Historial de versiones</h2><p className="mt-1 text-xs text-[var(--muted)]">Se conservan las últimas 20 versiones. Revertir crea una versión nueva y auditable.</p></div><DataTable accessibleName="Versiones de configuración" rows={[...configState.versions].reverse()} columns={versions} getRowKey={row => String(row.number)} emptyMessage="Aún no hay versiones." /></Panel>
+      ) },
+      { id: 'auditoria', label: 'Auditoría local', icon: ClipboardList, count: configState.audit.length, content: (
+      <Panel className="overflow-hidden"><div className="border-b border-[var(--border)] p-5"><h2 className="flex items-center gap-2 text-sm font-bold">Auditoría local</h2><p className="mt-1 text-xs text-[var(--muted)]">Identidad de prueba, no autenticada. Se conservan las últimas 100 acciones.</p></div><DataTable accessibleName="Auditoría de configuración" rows={[...configState.audit].reverse()} columns={audits} getRowKey={row => String(row.id)} emptyMessage="Aún no hay registros de auditoría." /></Panel>
+      ) },
+    ]}/>
     <ConfirmDialog open={rollbackTarget !== null} title={`Revertir al contenido de v${rollbackTarget ?? ''}`}
       message="Se publicará una nueva versión con los datos seleccionados. Se conservará el historial anterior y se actualizarán cámaras y zonas de Monitoreo."
       onCancel={() => setRollbackTarget(null)} onConfirm={confirmRollback} confirmLabel="Revertir versión"/>

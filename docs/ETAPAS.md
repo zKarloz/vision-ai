@@ -476,8 +476,18 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 
 ### Etapa 7 — Refinamiento de navegación: pestañas de Incidentes y Reportes (v1.9.4, ajuste de interfaz)
 
-- **Incidentes:** dos pestañas, «Incidentes» y «Auditoría de acciones»; las tres tarjetas de resumen (pendientes de reconocer, sin cierre y cerrados) y el estado de alarma siguen visibles en ambas. Se mantienen filtros, paginación, exportación y modales de reconocimiento/cierre.
+- **Incidentes:** dos pestañas, «Incidentes» y «Auditoría de acciones»; las tres tarjetas de resumen (pendientes de reconocer, sin cierre y cerrados) siguen visibles en ambas; el estado sin alarmas se traslada posteriormente a Configuración. Se mantienen filtros, paginación, exportación y modales de reconocimiento/cierre.
 - **Reportes:** tres pestañas, «Operación y sincronización» (simulación de cierre diario, envío al administrador y Supabase), «Informes generados» y «Auditoría de reportes». Las tarjetas generales de reportes permanecen visibles. Los avisos de generación/descarga aparecen por encima de las pestañas para ser visibles desde cualquier sección.
 - Se incorpora el componente compartido `Tabs`, con semántica `tablist` / `tab` / `tabpanel`, control con flechas izquierda/derecha, `Home`/`End`, foco visible y barra horizontal desplazable en pantallas pequeñas; los paneles inactivos no montan tablas ni lógica innecesaria.
 - **Sin cambios funcionales** en inferencia YOLO, estados de incidentes, persistencia, sincronización automática, permisos RLS, Resend ni Cron. Esta es una mejora de presentación, no un nuevo cierre de etapa.
 - Validación: `npm run test && npm run typecheck && npm run build`, comprobar tabs con ratón y teclado, filtros y tablas paginadas, las tres tarjetas persistentes y visualización móvil/tema oscuro.
+
+
+### Etapa 7 — Ajuste UI posterior a v1.9.4: pestañas redondeadas y alerta de Monitoreo (17/11/2026)
+
+- `Tabs` es un componente compartido: barra con fondo, borde y esquinas redondeadas; pestaña activa resaltada como superficie independiente; teclado con flechas y Home/End y adaptación móvil. Se aplica a Incidentes, Reportes y Configuración.
+- **Incidentes:** conserva las tres tarjetas de indicadores sobre sus dos pestañas, pero retira la tarjeta de alarma, que no es una tabla ni una acción propia del historial.
+- **Configuración:** pestañas «General» (configuración activa, apariencia, importación y tarjeta «Sin alarmas sonoras pendientes» cuando no hay pendientes), «Historial de versiones» (solo su tabla) y «Auditoría local» (solo su tabla). El diálogo de reversión se mantiene fuera del panel para que siga operativo desde la segunda pestaña.
+- **Monitoreo:** cuando hay alarmas pendientes, se muestra una notificación flotante compacta en la esquina superior derecha, con reconocimiento, control de audio y enlace a Incidentes. Desaparece al reconocer la última alarma. La tarjeta grande ya no aparece en el Panel principal. El indicador global continúa en el menú de cuenta.
+- Solo se modifican elementos de presentación y visibilidad; no cambian el centro compartido de incidentes, la lógica YOLO ni los trabajos remotos. La alerta sonora requiere habilitación explícita del usuario.
+- Validar: `npm run test && npm run typecheck && npm run build`; verificar pestañas con teclado y móvil, abrir/reconocer alarmas sin interrumpir YOLO, comprobación de ausencia de notificaciones inactivas en Incidentes/Panel principal y tema oscuro.

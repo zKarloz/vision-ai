@@ -33,7 +33,7 @@ export function MonitoringPage() {
   return <>
     <PageHeader title="Monitoreo de cámaras"
       description="Escenario 3D compartido o fuentes locales MP4/WebM y webcam. Las detecciones de personas proceden de YOLO sobre fotogramas reales."/>
-    <AlarmStatusBar/>
+    <AlarmStatusBar variant="floating"/>
     <Panel className="mb-5 flex flex-wrap items-center gap-3 p-4">
       <label htmlFor="monitor-camera-source" className="text-xs font-bold">Fuente de monitoreo</label>
       <select id="monitor-camera-source" className={`${control} min-w-[220px] flex-1 sm:flex-none`}

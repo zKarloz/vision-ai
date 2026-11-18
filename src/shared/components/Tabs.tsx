@@ -42,7 +42,7 @@ export function Tabs({ items, label }: { items: readonly TabItem[]; label: strin
 
   return <section aria-label={label}>
     <div role="tablist" aria-label={label}
-      className="flex w-full gap-1 overflow-x-auto border-b border-[var(--border)]"
+      className="flex w-full max-w-full gap-1.5 overflow-x-auto rounded-2xl border border-[var(--border)] bg-[var(--muted-bg)] p-1.5 shadow-sm"
     >
       {items.map((item, index) => {
         const selected = index === activeIndex;
@@ -58,8 +58,8 @@ export function Tabs({ items, label }: { items: readonly TabItem[]; label: strin
           tabIndex={selected ? 0 : -1}
           onClick={() => setActiveId(item.id)}
           onKeyDown={event => handleKeyDown(event, index)}
-          className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:z-10 ${selected
-            ? 'border-[var(--accent)] bg-[var(--card)] text-[var(--text)]'
+          className={`inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:z-10 ${selected
+            ? 'border-[var(--border)] bg-[var(--card)] text-[var(--text)] shadow-sm'
             : 'border-transparent text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]'}`}
         >
           {Icon && <Icon size={16} aria-hidden="true" />}

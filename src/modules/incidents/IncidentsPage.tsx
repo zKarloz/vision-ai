@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { BellRing, CheckCircle2, Download, History, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useIncidentCenter } from '../../app/providers/IncidentCenterProvider';
 import { type CenterIncident, type IncidentAuditEvent } from '../../application/incidents/IncidentCenter';
-import { AlarmStatusBar } from '../../shared/components/AlarmStatusBar';
 import { Button } from '../../shared/components/Button';
 import { DataTable, type TableColumn } from '../../shared/components/DataTable';
 import { Modal } from '../../shared/components/Modal';
@@ -79,7 +78,6 @@ export function IncidentsPage() {
     <PageHeader title="Incidentes y auditoría"
       description="Incidentes YOLO, reconocimientos y auditoría. Una interrupción de la observación requiere revisión humana; no se interpreta como salida confirmada."
       actions={<Button onClick={exportAudit} disabled={!state.incidents.length}><Download size={16}/> Exportar historial JSON</Button>}/>
-    <AlarmStatusBar/>
     <section className="mb-5 grid gap-3 sm:grid-cols-3" aria-label="Resumen de incidentes">
       <Panel className="p-4"><div className="flex items-center gap-2 text-xs text-[var(--muted)]"><BellRing size={15}/> Pendientes de reconocer</div><p className="mt-2 text-2xl font-bold tabular-nums">{pendingCount}</p></Panel>
       <Panel className="p-4"><div className="flex items-center gap-2 text-xs text-[var(--muted)]"><ShieldAlert size={15}/> Sin cierre</div><p className="mt-2 text-2xl font-bold tabular-nums">{activeCount}</p></Panel>

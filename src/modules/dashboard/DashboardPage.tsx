@@ -6,7 +6,6 @@ import { summarizeCameras } from '../../core/domain/camera';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { StatusBadge } from '../../shared/components/StatusBadge';
-import { AlarmStatusBar } from '../../shared/components/AlarmStatusBar';
 
 const steps = [
   { title: 'Fuente de video', description: 'Cámara 3D, archivo o webcam', icon: Video },
@@ -28,7 +27,6 @@ export function DashboardPage() {
   ];
   return <>
     <PageHeader title="Centro de control" description="Plataforma de monitoreo visual industrial. El visor 3D y el motor YOLO real ahora forman parte nativa de Monitoreo." actions={<Link to="/monitoreo" className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-text)] hover:opacity-90"><Activity size={17} />Abrir monitoreo 3D <ArrowUpRight size={15} /></Link>} />
-    <AlarmStatusBar/>
     <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores del registro local">{metrics.map(({ label, value, icon: Icon, note }) => <Panel key={label} className="p-5"><div className="mb-5 flex items-center justify-between"><span className="text-xs font-semibold text-[var(--muted)]">{label}</span><span className="rounded-xl bg-[var(--muted-bg)] p-2 text-[var(--accent)]"><Icon size={19} /></span></div><p className="text-3xl font-bold tracking-tight tabular-nums">{value}</p><p className="mt-1 text-[11px] text-[var(--muted)]">{note}</p></Panel>)}</section>
     <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
       <Panel className="overflow-hidden">
