@@ -94,13 +94,13 @@ export function ReportsPage() {
               <option value="all">Todos</option><option value="incident">Por incidente</option><option value="daily">Diarios</option>
             </select></label>
           </div>
-          <DataTable accessibleName="Bandeja de reportes" rows={reports} columns={columns} getRowKey={row => row.key} pageSize={6} emptyMessage="Aún no hay reportes. Cierra un incidente YOLO o genera el resumen diario."/>
+          <DataTable accessibleName="Bandeja de reportes" rows={reports} columns={columns} getRowKey={row => row.key} emptyMessage="Aún no hay reportes. Cierra un incidente YOLO o genera el resumen diario."/>
         </Panel>
       ) },
       { id: 'auditoria', label: 'Auditoría de reportes', icon: ShieldCheck, count: state.audit.length, content: (
         <Panel className="overflow-hidden">
           <div className="p-5"><h2 className="text-sm font-bold">Auditoría de reportes</h2></div>
-          <DataTable accessibleName="Auditoría de reportes" rows={state.audit} columns={auditColumns} getRowKey={row => String(row.id)} pageSize={6} emptyMessage="Todavía no se han generado o descargado reportes."/>
+          <DataTable accessibleName="Auditoría de reportes" rows={state.audit} columns={auditColumns} getRowKey={row => String(row.id)} emptyMessage="Todavía no se han generado o descargado reportes."/>
         </Panel>
       ) },
     ]}/>

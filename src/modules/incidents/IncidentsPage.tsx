@@ -93,13 +93,13 @@ export function IncidentsPage() {
               <label className="text-xs">Cámara<select className="ml-2 rounded-lg border border-[var(--border)] bg-[var(--input)] px-2 py-1.5" value={cameraFilter} onChange={event => setCameraFilter(event.target.value)}><option value="all">Todas</option>{cameraIds.map(id => <option key={id} value={id}>{id}</option>)}</select></label>
             </div>
           </div>
-          <DataTable accessibleName="Incidentes YOLO" rows={filtered} columns={columns} getRowKey={row => row.id} pageSize={8} emptyMessage="Aún no hay incidentes confirmados por YOLO con estos filtros."/>
+          <DataTable accessibleName="Incidentes YOLO" rows={filtered} columns={columns} getRowKey={row => row.id} emptyMessage="Aún no hay incidentes confirmados por YOLO con estos filtros."/>
         </Panel>
       ) },
       { id: 'auditoria', label: 'Auditoría de acciones', icon: History, count: state.audit.length, content: (
         <Panel className="overflow-hidden">
           <div className="flex items-center gap-2 p-5"><History size={17}/><h2 className="text-sm font-bold">Auditoría de acciones</h2></div>
-          <DataTable accessibleName="Auditoría de incidentes" rows={state.audit} columns={auditColumns} getRowKey={event => event.id} pageSize={8} emptyMessage="La auditoría aparecerá al producirse un incidente confirmado."/>
+          <DataTable accessibleName="Auditoría de incidentes" rows={state.audit} columns={auditColumns} getRowKey={event => event.id} emptyMessage="La auditoría aparecerá al producirse un incidente confirmado."/>
         </Panel>
       ) },
     ]}/>

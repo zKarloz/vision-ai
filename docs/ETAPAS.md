@@ -491,3 +491,12 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 - **Monitoreo:** cuando hay alarmas pendientes, se muestra una notificación flotante compacta en la esquina superior derecha, con reconocimiento, control de audio y enlace a Incidentes. Desaparece al reconocer la última alarma. La tarjeta grande ya no aparece en el Panel principal. El indicador global continúa en el menú de cuenta.
 - Solo se modifican elementos de presentación y visibilidad; no cambian el centro compartido de incidentes, la lógica YOLO ni los trabajos remotos. La alerta sonora requiere habilitación explícita del usuario.
 - Validar: `npm run test && npm run typecheck && npm run build`; verificar pestañas con teclado y móvil, abrir/reconocer alarmas sin interrumpir YOLO, comprobación de ausencia de notificaciones inactivas en Incidentes/Panel principal y tema oscuro.
+
+
+### Ajuste de interfaz v1.9.4 — Animación de alarmas y paginación unificada
+
+- La notificación flotante de Monitoreo entra desplazándose suavemente desde arriba y sale hacia arriba cuando la última alarma se reconoce. React conserva el elemento hasta completar la animación de salida, y cancela dicha salida si aparece una nueva alarma. Respeta `prefers-reduced-motion`.
+- Todas las tablas del sistema usan `DataTable` y el selector compartido `PageSizeSelector`, con opciones **5, 10 y 20** registros por página. Se muestran **5** al iniciar cada tabla; cambiar la cantidad vuelve a la primera página.
+- Se eliminaron tamaños de página específicos de Incidentes y Reportes. Las tablas de Cámaras y Configuración también usan el mismo componente.
+- No se alteraron YOLO, reglas de incidentes, sincronización Supabase ni la programación Resend/Cron.
+- Verificar en Chrome transiciones de alarma, botones de paginación en todas las pestañas, teclado, tema oscuro y móvil.

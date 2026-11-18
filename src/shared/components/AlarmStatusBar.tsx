@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BellOff, BellRing, ShieldAlert, Volume2, VolumeX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useIncidentCenter } from '../../app/providers/IncidentCenterProvider';
@@ -7,6 +7,17 @@ import { Button } from './Button';
 import { Modal } from './Modal';
 
 type AlarmView = 'settings' | 'floating';
+export type AlarmMotion = 'hidden' | 'entering' | 'visible' | 'exiting';
+
+/**
+ * Controla la presencia de la notificación flotante sin desmontarla de inmediato.
+ * Esto permite reproducir la salida hacia arriba antes de retirarla del DOM.
+ */
+export function nextAlarmMotion(current: AlarmMotion, hasPending: boolean): AlarmMotion {
+  if (hasPending) return current === 'hidden' || current === 'exiting' ? 'entering' : current;
+  return current === 'hidden' ? 'hidden' : 'exiting';
+}
+
 
 /**
  * Las alarmas se muestran en una sola ubicación según su estado:
@@ -28,14 +39,38 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
   const acknowledgedCount = state.incidents.filter(item => item.status === 'acknowledged').length;
   const pendingCount = pendingAlarms(state.incidents);
   const isFloating = variant === 'floating';
+  // Conserva el último contenido mientras la tarjeta se desliza hacia arriba;
+  // de lo contrario mostraría fugazmente «0 alarmas pendientes» durante la salida.
+  const lastPending = useRef(pending);
+  if (pendingCount > 0) lastPending.current = pending;
+  const displayPending = pendingCount > 0 ? pending : lastPending.current;
+  const displayCount = pendingCount > 0 ? pendingCount : displayPending.length;
+  const [motion, setMotion] = useState<AlarmMotion>(
+    isFloating && pendingCount > 0 ? 'entering' : 'hidden',
+  );
+
+  // Al reconocer la última alarma se inicia la salida, no se desmonta la tarjeta.
+  // Si aparece otra alarma durante la salida, se cancela y vuelve a entrar.
+  useEffect(() => {
+    if (!isFloating) return;
+    setMotion(previous => nextAlarmMotion(previous, pendingCount > 0));
+  }, [isFloating, pendingCount]);
+
+  function finishMotion() {
+    setMotion(previous => {
+      if (previous === 'entering' && pendingCount > 0) return 'visible';
+      if (previous === 'exiting' && pendingCount === 0) return 'hidden';
+      return previous;
+    });
+  }
 
   // Al reconocer la última alarma se descarta el diálogo anterior.
   useEffect(() => {
     if (pendingCount === 0) setDialogOpen(false);
   }, [pendingCount]);
 
-  // Si no corresponde el estado a esta ruta, no se monta ninguna tarjeta.
-  if (!shouldRenderAlarmView(variant, pendingCount)) return null;
+  // En modo flotante mantenemos la tarjeta durante la animación de salida.
+  if (isFloating ? motion === 'hidden' : !shouldRenderAlarmView(variant, pendingCount)) return null;
 
   function acknowledgeInline() {
     const target = pending.find(incident => incident.id === selectedId) ?? pending[0];
@@ -60,13 +95,17 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
   return <>
     {isFloating ? (
       <div className="pointer-events-none fixed right-4 top-[82px] z-[15] w-[min(360px,calc(100vw-2rem))] sm:right-6">
-        <div role="status" aria-label="Alarma de monitoreo" aria-live="polite" className="pointer-events-auto rounded-2xl border border-[var(--danger)] bg-[var(--card)] p-4 text-[var(--text)] shadow-2xl">
+        <div role="status" aria-label="Alarma de monitoreo" aria-live="polite"
+          aria-hidden={motion === 'exiting'}
+          onAnimationEnd={event => { if (event.target === event.currentTarget) finishMotion(); }}
+          className={`rounded-2xl border border-[var(--danger)] bg-[var(--card)] p-4 text-[var(--text)] shadow-2xl ${motion === 'entering' ? 'alarm-float-enter pointer-events-auto' : motion === 'exiting' ? 'alarm-float-exit pointer-events-none' : 'pointer-events-auto'}`}>
+
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-[var(--danger-bg)] p-2 text-[var(--danger)]"><BellRing size={19} aria-hidden="true"/></span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold">{pendingCount === 1 ? '1 alarma pendiente' : `${pendingCount} alarmas pendientes`}</p>
+              <p className="text-sm font-bold">{displayCount === 1 ? '1 alarma pendiente' : `${displayCount} alarmas pendientes`}</p>
               <p className="mt-1 text-xs text-[var(--muted)]">Requiere reconocimiento · {soundEnabled ? 'Audio activo' : 'Audio desactivado'}</p>
-              {pending.length === 1 && <p className="mt-1 truncate text-[11px] text-[var(--muted)]" title={`${pending[0].cameraId} · ${pending[0].zoneId}`}>{pending[0].cameraId} · {pending[0].zoneId}</p>}
+              {displayPending.length === 1 && <p className="mt-1 truncate text-[11px] text-[var(--muted)]" title={`${displayPending[0].cameraId} · ${displayPending[0].zoneId}`}>{displayPending[0].cameraId} · {displayPending[0].zoneId}</p>}
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">

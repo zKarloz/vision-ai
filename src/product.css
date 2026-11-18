@@ -81,6 +81,19 @@ button, input, select, textarea { font: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [role="region"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 ::selection { background: var(--notice-border); }
 
+/* Notificación de alarma: baja suavemente al entrar y asciende al salir.
+   La salida se completa antes de desmontar el componente de React. */
+@keyframes alarm-slide-down {
+  from { opacity: 0; transform: translate3d(0, -22px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes alarm-slide-up {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 0; transform: translate3d(0, -22px, 0); }
+}
+.alarm-float-enter { animation: alarm-slide-down 340ms cubic-bezier(.2,.85,.2,1) both; }
+.alarm-float-exit { animation: alarm-slide-up 260ms ease-in both; }
+
 /* Respeta la preferencia de reducir animaciones para las transiciones UI. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
