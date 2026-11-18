@@ -6,6 +6,8 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { Spinner } from '../../shared/components/Spinner';
 import { AlarmStatusBar } from '../../shared/components/AlarmStatusBar';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { canAccessModule } from '../../application/remote/accessPolicy';
 
 // La pantalla sólo importa Three.js cuando se selecciona un ángulo 3D.
 const VirtualMonitoringContent = lazy(() => import('./VirtualMonitoringContent').then(m => ({ default: m.VirtualMonitoringContent })));
@@ -16,6 +18,7 @@ const control = 'rounded-xl border border-[var(--border)] bg-[var(--input)] px-3
 /** Selector general: sólo una vista y un Worker YOLO activos al mismo tiempo. */
 export function MonitoringPage() {
   const { cameras } = useCameraRegistry();
+  const { role } = useAuth();
   const [params, setParams] = useSearchParams();
   const supported = cameras.filter(camera => camera.enabled && (
     camera.sourceType === 'virtual-3d' ||
@@ -41,7 +44,7 @@ export function MonitoringPage() {
         {supported.length ? supported.map(camera => <option key={camera.id} value={camera.id}>{camera.id} · {camera.name} ({camera.sourceType === 'virtual-3d' ? '3D' : camera.sourceType === 'webcam' ? 'Webcam' : 'Vídeo'})</option>) : <option value="">Sin cámaras habilitadas</option>}
       </select>
       <span className="text-xs text-[var(--muted)]">{selected?.sourceType === 'virtual-3d' ? 'Una escena · varias perspectivas' : selected ? 'Archivo o dispositivo local · fuente seleccionada' : 'Habilita una cámara desde el gestor'}</span>
-      <Link to="/camaras" className="ml-auto text-xs font-semibold text-[var(--accent)] underline">Administrar cámaras</Link>
+      {canAccessModule(role, 'camaras') && <Link to="/camaras" className="ml-auto text-xs font-semibold text-[var(--accent)] underline">Administrar cámaras</Link>}
     </Panel>
     <Suspense fallback={<Panel className="grid min-h-80 place-items-center"><Spinner label="Preparando fuente de vídeo…"/></Panel>}>
     {!selected ? <Panel className="p-6 text-sm text-[var(--muted)]">No hay fuentes compatibles activas. Habilita alguna cámara en el gestor de cámaras.</Panel>

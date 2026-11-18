@@ -91,6 +91,8 @@ export function RemoteSyncProvider({ children }: { children: ReactNode }) {
           try { window.localStorage.setItem(key, JSON.stringify(plan.checkpoint)); }
           catch { /* En memoria esta sesión; el upsert remoto sigue siendo idempotente. */ }
           setSyncedCount(count);
+          // Invalida la lectura compartida tras confirmar los cambios en PostgreSQL.
+          window.dispatchEvent(new Event('vision-ai:remote-changed'));
         } else setSyncedCount(0);
         setLastSyncedAt(new Date().toISOString());
         setPendingCount(0);

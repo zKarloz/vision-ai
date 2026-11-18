@@ -1,6 +1,6 @@
 {
   "name": "vision-ai",
-  "version": "1.9.4-stage7-monitoring-continuity",
+  "version": "1.9.6-stage7-shared-history",
   "private": true,
   "type": "module",
   "scripts": {

@@ -109,6 +109,19 @@ select:not([multiple]):not([size]) {
 .alarm-float-enter { animation: alarm-slide-down 340ms cubic-bezier(.2,.85,.2,1) both; }
 .alarm-float-exit { animation: alarm-slide-up 260ms ease-in both; }
 
+/* Menú de usuario: se despliega desde arriba y se recoge antes de desmontarse.
+   La animación no altera el posicionamiento del topbar ni los controles internos. */
+@keyframes account-menu-slide-in {
+  from { opacity: 0; transform: translate3d(0, -12px, 0) scale(.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes account-menu-slide-out {
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  to { opacity: 0; transform: translate3d(0, -12px, 0) scale(.98); }
+}
+.account-menu-enter { animation: account-menu-slide-in 240ms cubic-bezier(.22,1,.36,1) both; }
+.account-menu-exit { animation: account-menu-slide-out 190ms ease-in both; pointer-events: none; }
+
 /* Respeta la preferencia de reducir animaciones para las transiciones UI. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }

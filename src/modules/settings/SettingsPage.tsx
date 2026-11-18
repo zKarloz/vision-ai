@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Database, Download, FileJson2, History, Moon, RotateCcw, Sun, Upload, SlidersHorizontal, ClipboardList } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Database, Download, FileJson2, History, RotateCcw, Upload, SlidersHorizontal, ClipboardList } from 'lucide-react';
 import { useCameraRegistry } from '../../app/providers/CameraRegistryProvider';
-import { useTheme } from '../../app/providers/ThemeProvider';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { canManageConfiguration } from '../../application/remote/accessPolicy';
+import { AppearanceSettingsPanel, ProfileSettingsPanel } from './PersonalPreferences';
 import { ConfigValidationError, validateConfig, type ConfigSnapshot } from '../../application/config/configSchema';
 import type { ConfigAudit, ConfigVersion } from '../../infrastructure/config/VersionedLocalConfigRepository';
 import { AlarmStatusBar } from '../../shared/components/AlarmStatusBar';
@@ -26,7 +28,7 @@ function downloadJson(filename: string, json: string) {
 
 /** Configuración versionada: edición operativa y tablas de historial en pestañas independientes. */
 export function SettingsPage() {
-  const { theme, setTheme } = useTheme();
+  const { role } = useAuth();
   const { config, configState, importConfig, rollbackConfig, exportConfig } = useCameraRegistry();
   const [candidate, setCandidate] = useState<ConfigSnapshot | null>(null);
   const [filename, setFilename] = useState('');
@@ -86,6 +88,16 @@ export function SettingsPage() {
     {key:'details', header:'Detalle', render: entry => <span className="text-xs text-[var(--muted)]">{entry.details}</span>},
   ];
 
+  // Las preferencias individuales no conceden acceso a la configuración de cámaras.
+  // Los otros tres roles nunca montan los controles administrativos ni sus tablas.
+  if (!canManageConfiguration(role)) return <>
+    <PageHeader title="Configuración personal" description="Cambia tu nombre visible y cómo se presenta VISION AI en este dispositivo." />
+    <div className="grid gap-5 xl:grid-cols-2">
+      <ProfileSettingsPanel />
+      <AppearanceSettingsPanel />
+    </div>
+  </>;
+
   return <>
     <PageHeader title="Configuración y carga de datos"
       description="Importa y exporta cámaras, zonas y reglas. Las versiones se validan, publican íntegramente y pueden revertirse." />
@@ -93,7 +105,8 @@ export function SettingsPage() {
       { id: 'general', label: 'General', icon: SlidersHorizontal, content: (
         <>
           <AlarmStatusBar variant="settings"/>
-    <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
+          <div className="mb-5 grid gap-5 xl:grid-cols-2"><ProfileSettingsPanel/><AppearanceSettingsPanel/></div>
+    <div className="grid gap-5">
       <Panel className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 text-sm font-bold"><Database size={18}/> Configuración activa</h2><p className="mt-1 text-xs text-[var(--muted)]">Persistencia local versionada · modo académico</p></div><StatusBadge tone="success"><CheckCircle2 size={12}/> v{active.number}</StatusBadge></div>
         <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
@@ -102,7 +115,6 @@ export function SettingsPage() {
         <p className="mt-4 break-all text-[11px] text-[var(--muted)]">Huella de contenido FNV-1a (no criptográfica): <code>{active.checksum}</code></p>
         <div className="mt-5 flex flex-wrap gap-2"><Button variant="primary" onClick={() => downloadJson(`vision-ai-config-v${active.number}.json`, exportConfig())}><Download size={15}/> Exportar configuración</Button><a className="inline-flex items-center rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold hover:bg-[var(--muted-bg)]" href="/examples/vision-ai-config-valid.json" download>Ejemplo válido</a><a className="inline-flex items-center rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold hover:bg-[var(--muted-bg)]" href="/examples/vision-ai-config-invalid.json" download>Ejemplo inválido</a></div>
       </Panel>
-      <Panel className="p-5"><h2 className="flex items-center gap-2 text-sm font-bold"><Sun size={18}/> Apariencia</h2><p className="mt-1 text-xs text-[var(--muted)]">Tema claro predeterminado y oscuro en escala de grises.</p><div className="mt-5 flex flex-wrap gap-2"><Button variant={theme === 'light' ? 'primary' : 'secondary'} onClick={() => setTheme('light')}><Sun size={15}/> Claro</Button><Button variant={theme === 'dark' ? 'primary' : 'secondary'} onClick={() => setTheme('dark')}><Moon size={15}/> Oscuro</Button></div><p className="mt-5 text-xs leading-5 text-[var(--muted)]">La configuración de cámaras, zonas y reglas se guarda localmente por cuenta. Los incidentes y su auditoría se sincronizan con Supabase cuando hay conexión.</p></Panel>
       <Panel className="p-5 xl:col-span-2"><h2 className="flex items-center gap-2 text-sm font-bold"><Upload size={18}/> Importar JSON</h2>
         <p className="mt-2 text-xs leading-5 text-[var(--muted)]">UTF-8, máximo 256 KiB. Se comprueban los tipos, identificadores únicos, referencias y polígonos. Una importación inválida no modifica la versión activa.</p>
         <div className="mt-4 flex flex-wrap items-center gap-3"><input ref={fileInput} aria-label="Archivo de configuración JSON" className={field} type="file" accept=".json,application/json" onChange={e => {void readFile(e.target.files?.[0]);}} />{candidate && <Button variant="primary" onClick={confirmImport}><FileJson2 size={15}/> Confirmar importación</Button>}</div>

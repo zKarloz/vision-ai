@@ -2,9 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { BellOff, BellRing, ShieldAlert, Volume2, VolumeX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useIncidentCenter } from '../../app/providers/IncidentCenterProvider';
+import { useSharedHistory } from '../../app/providers/SharedHistoryProvider';
+import { remoteClient, getInstallationId } from '../../infrastructure/supabase/client';
+import { buildRemotePayload, remoteIncidentId } from '../../application/remote/remotePayload';
+import { upsertRemoteChanges } from '../../infrastructure/supabase/incidentSync';
 import { pendingAlarms } from '../../core/domain/alarmPolicy';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { canAcknowledgeIncident } from '../../application/remote/accessPolicy';
 
 type AlarmView = 'settings' | 'floating';
 export type AlarmMotion = 'hidden' | 'entering' | 'visible' | 'exiting';
@@ -30,11 +36,14 @@ export function shouldRenderAlarmView(view: AlarmView, pendingCount: number): bo
 }
 
 export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }) {
-  const { center, state, soundEnabled, soundError, enableSound, disableSound } = useIncidentCenter();
+  const { state, soundEnabled, soundError, enableSound, disableSound } = useIncidentCenter();
+  const shared = useSharedHistory();
+  const { role, session } = useAuth();
+  const mayAcknowledge = canAcknowledgeIncident(role);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState('');
-  const [supervisor, setSupervisor] = useState('');
   const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
   const pending = state.incidents.filter(item => item.status === 'open' || item.status === 'escalated');
   const acknowledgedCount = state.incidents.filter(item => item.status === 'acknowledged').length;
   const pendingCount = pendingAlarms(state.incidents);
@@ -72,17 +81,25 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
   // En modo flotante mantenemos la tarjeta durante la animación de salida.
   if (isFloating ? motion === 'hidden' : !shouldRenderAlarmView(variant, pendingCount)) return null;
 
-  function acknowledgeInline() {
+  async function acknowledgeInline() {
     const target = pending.find(incident => incident.id === selectedId) ?? pending[0];
-    if (!target) return;
+    if (!target || !mayAcknowledge || !session || !remoteClient || saving) return;
+    setSaving(true);
     try {
-      center.acknowledge(target.id, supervisor);
+      // La detección puede haberse creado hace menos de 900 ms y aún no existir
+      // en Supabase. Sincronizar solo este incidente ANTES del RPC transaccional.
+      const installation = getInstallationId();
+      const globalId = remoteIncidentId(session.user.id, installation, target.id);
+      const payload = buildRemotePayload(state, session.user.id, installation, new Date().toISOString());
+      const row = payload.incidents.find(item => item.id === globalId);
+      if (!row) throw new Error('Este incidente todavía no tiene un registro YOLO sincronizable.');
+      await upsertRemoteChanges(remoteClient, [row], payload.audit.filter(item => item.incident_id === globalId));
+      await shared.actOnIncident(globalId, 'acknowledge');
       setDialogOpen(false);
-      setSupervisor('');
       setFormError('');
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'No fue posible reconocer la alarma.');
-    }
+    } finally { setSaving(false); }
   }
 
   const soundButton = <Button size="sm" onClick={() => {
@@ -109,9 +126,9 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="primary" onClick={() => {
+            {mayAcknowledge && <Button size="sm" variant="primary" onClick={() => {
               setSelectedId(pending[0]?.id ?? ''); setDialogOpen(true); setFormError('');
-            }}>Reconocer</Button>
+            }}>Reconocer</Button>}
             {soundButton}
             <Link to="/incidentes" className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-[var(--border)] px-3 text-xs font-semibold hover:bg-[var(--muted-bg)]"><ShieldAlert size={14}/> Ver incidentes</Link>
           </div>
@@ -136,19 +153,19 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
         {!state.storageOk && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">El historial no se pudo guardar en este navegador.</p>}
       </section>
     )}
-    <Modal open={dialogOpen && pendingCount > 0} onClose={() => setDialogOpen(false)} title="Reconocer alarma durante el monitoreo"
+    <Modal open={mayAcknowledge && dialogOpen && pendingCount > 0} onClose={() => setDialogOpen(false)} title="Reconocer alarma durante el monitoreo"
       description="El reconocimiento silencia la alarma seleccionada sin detener YOLO ni cerrar el incidente.">
-      <form className="space-y-4" onSubmit={event => { event.preventDefault(); acknowledgeInline(); }}>
+      <form className="space-y-4" onSubmit={event => { event.preventDefault(); void acknowledgeInline(); }}>
         <label className="block text-xs font-bold">Incidente
           <select className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--input)] p-3" value={selectedId} onChange={event => setSelectedId(event.target.value)}>
             {pending.map(item => <option value={item.id} key={item.id}>{item.id} · {item.cameraId} · {item.zoneId}</option>)}
           </select>
         </label>
-        <label className="block text-xs font-bold">Supervisor (identidad de prueba)
-          <input className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--input)] p-3" value={supervisor} onChange={event => setSupervisor(event.target.value)} maxLength={80} placeholder="Nombre del supervisor" required/>
+        <label className="block text-xs font-bold">Responsable autenticado
+          <input className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--input)] p-3" value={session?.user.email ?? ''} readOnly/>
         </label>
         {formError && <p role="alert" className="text-xs text-[var(--danger)]">{formError}</p>}
-        <div className="flex justify-end gap-2"><Button onClick={() => setDialogOpen(false)}>Cancelar</Button><Button type="submit" variant="primary">Reconocer incidente</Button></div>
+        <div className="flex justify-end gap-2"><Button onClick={() => setDialogOpen(false)}>Cancelar</Button><Button type="submit" variant="primary" disabled={saving}>{saving ? 'Registrando…' : 'Reconocer incidente'}</Button></div>
       </form>
     </Modal>
   </>;

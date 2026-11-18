@@ -1,4 +1,6 @@
 import { transitionIncident, type Incident } from '../../core/domain/incident';
+import { applySharedDecision } from '../remote/sharedDecision';
+import type { SharedIncidentRow } from '../remote/sharedHistory';
 
 /** Evento estructurado y auditable: no almacena fotografías ni clips. */
 export type IncidentAuditAction = 'opened' | 'acknowledged' | 'escalated' | 'closed' | 'tracking-lost' | 'closed-by-supervisor';
@@ -214,6 +216,25 @@ export class IncidentCenter {
       }
     }
     if (changed) this.publish(next);
+  }
+
+  /**
+   * Refleja las decisiones REMOTAS en el navegador que originó la detección.
+   * No copia incidentes ajenos ni crea eventos locales duplicados. El historial
+   * global se lee siempre desde Supabase con su autor original.
+   */
+  reconcileSharedDecisions(rows: readonly SharedIncidentRow[]): void {
+    if (!rows.length) return;
+    const byLocalId = new Map(rows.map(row => [row.local_id, row]));
+    let changed = false;
+    const incidents = this.state.incidents.map(local => {
+      const row = byLocalId.get(local.id);
+      if (!row) return local;
+      const next = applySharedDecision(local, row);
+      if (next !== local) changed = true;
+      return next;
+    });
+    if (changed) this.publish({ ...this.state, incidents });
   }
 
   acknowledge(id: string, by: string, at = new Date().toISOString()): void {

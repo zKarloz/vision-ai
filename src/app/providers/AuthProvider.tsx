@@ -3,18 +3,23 @@ import type { Session } from '@supabase/supabase-js';
 import { isRecognizedRole, mayEnterProduct } from '../../application/remote/accessPolicy';
 import type { MemberRole } from '../../application/remote/remotePayload';
 import { remoteClient, remoteConfigured } from '../../infrastructure/supabase/client';
+import { changeFirstPassword } from '../../infrastructure/supabase/usersAdminApi';
+import { DISPLAY_NAME_METADATA_KEY, displayNameForUser, normalizeDisplayName } from '../../application/remote/profileDisplayName';
 
-export type AuthStatus = 'unconfigured' | 'checking' | 'signed-out' | 'authorized' | 'forbidden' | 'error';
+export type AuthStatus = 'unconfigured' | 'checking' | 'signed-out' | 'authorized' | 'password-change-required' | 'forbidden' | 'error';
 
 interface AuthContextValue {
   configured: boolean;
   status: AuthStatus;
   session: Session | null;
   role: MemberRole | null;
+  displayName: string;
+  updateDisplayName: (name: string) => Promise<void>;
   error: string;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   retry: () => Promise<void>;
+  completeFirstPassword: (password: string) => Promise<void>;
 }
 const Context = createContext<AuthContextValue | null>(null);
 
@@ -40,7 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const key = nextSession ? `${nextSession.user.id}:${nextSession.access_token}` : null;
       // Supabase puede emitir SIGNED_IN al recuperar el foco de la pestaña.
       // No invalidar el acceso si la identidad y el token no han cambiado.
-      if (key === lastSessionKey.current) return;
+      if (key === lastSessionKey.current) {
+        // USER_UPDATED cambia el perfil pero no necesariamente el JWT.
+        // No reiniciamos la autorización ni la bandeja al cambiar solo el nombre.
+        if (_event === 'USER_UPDATED') setSession(nextSession);
+        return;
+      }
       lastSessionKey.current = key;
       setSession(nextSession);
       setRole(null);
@@ -79,8 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         const memberRole = isRecognizedRole(data?.role) ? data.role : null;
         setRole(memberRole);
+        // getUser devuelve los metadatos actualizados en el servidor, incluso
+        // cuando getSession restauró un objeto antiguo desde el navegador.
+        setSession(previous => previous && previous.user.id === expectedUserId &&
+          displayNameForUser(previous.user) !== displayNameForUser(identity.user)
+          ? { ...previous, user: identity.user } : previous);
         setError('');
-        setStatus(mayEnterProduct(memberRole) ? 'authorized' : 'forbidden');
+        setStatus(mayEnterProduct(memberRole)
+          ? (identity.user.app_metadata?.vision_ai_password_change_required === true ? 'password-change-required' : 'authorized')
+          : 'forbidden');
       } catch (cause) {
         if (!active) return;
         setRole(null);
@@ -120,7 +137,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setVerificationRequest(current => current + 1);
   }
 
-  return <Context.Provider value={{ configured: remoteConfigured, status, session, role, error, signIn, signOut, retry }}>
+  /** Actualiza solo metadatos de perfil editables por el dueño de la sesión. */
+  async function updateDisplayName(name: string): Promise<void> {
+    if (!remoteClient || !session) throw new Error('Inicia sesión para actualizar tu perfil.');
+    const normalized = normalizeDisplayName(name);
+    const expectedUserId = session.user.id;
+    const { data, error: updateError } = await remoteClient.auth.updateUser({
+      data: { [DISPLAY_NAME_METADATA_KEY]: normalized },
+    });
+    if (updateError) throw new Error(updateError.message);
+    if (!data.user || data.user.id !== expectedUserId) throw new Error('No se confirmó la actualización del perfil.');
+    // La actualización de metadatos no vuelve a verificar permisos ni cierra sesión.
+    setSession(previous => previous && previous.user.id === expectedUserId
+      ? { ...previous, user: data.user! } : previous);
+  }
+
+  async function completeFirstPassword(password: string): Promise<void> {
+    if (!remoteClient || !session) throw new Error('Inicia sesión primero.');
+    await changeFirstPassword(password);
+    // La contraseña YA fue modificada por el servidor: un fallo posterior
+    // de refreshSession no debe presentarse como fallo del cambio de clave.
+    // Intentamos recuperar un JWT con los metadatos actualizados.
+    try {
+      const { error: refreshError } = await remoteClient.auth.refreshSession();
+      if (refreshError) throw refreshError;
+      setVerificationRequest(value => value + 1);
+    } catch {
+      // Una sesión caducada no impide recuperar la cuenta con la NUEVA clave.
+      // Cerramos la sesión local, sin intentar repetir el cambio de contraseña.
+      await remoteClient.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      lastSessionKey.current = null;
+      setSession(null);
+      setRole(null);
+      setError('');
+      setStatus('signed-out');
+    }
+  }
+
+  return <Context.Provider value={{ configured: remoteConfigured, status, session, role, displayName: displayNameForUser(session?.user), updateDisplayName, error, signIn, signOut, retry, completeFirstPassword }}>
     {children}
   </Context.Provider>;
 }

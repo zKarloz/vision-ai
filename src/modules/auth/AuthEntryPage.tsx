@@ -15,6 +15,11 @@ export function AuthEntryPage() {
   const [working, setWorking] = useState(false);
   const [formError, setFormError] = useState('');
   const [leaving, setLeaving] = useState(false);
+  const [firstPassword, setFirstPassword] = useState('');
+  const [firstPasswordConfirm, setFirstPasswordConfirm] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +40,27 @@ export function AuthEntryPage() {
   const forbidden = auth.status === 'forbidden';
   const unconfigured = auth.status === 'unconfigured';
   const statusError = auth.status === 'error';
+  const firstPasswordRequired = auth.status === 'password-change-required';
+
+  async function completePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError('');
+    if (firstPassword.length < 12 || firstPassword !== firstPasswordConfirm) {
+      setPasswordError('Usa al menos 12 caracteres y confirma la misma contraseña.');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await auth.completeFirstPassword(firstPassword);
+      setFirstPassword(''); setFirstPasswordConfirm('');
+      setPasswordChanged(true);
+    } catch (cause) {
+      const detail = cause instanceof Error ? cause.message : 'No fue posible guardar la contraseña.';
+      setPasswordError(detail.includes('no necesita cambiar')
+        ? 'La contraseña ya se cambió. Cierra sesión e ingresa con tu contraseña personal.'
+        : detail);
+    } finally { setChangingPassword(false); }
+  }
 
   return <div className="flex min-h-screen flex-col bg-[var(--page)] text-[var(--text)]">
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
@@ -56,17 +82,33 @@ export function AuthEntryPage() {
           : unconfigured ? <div className="space-y-3"><h2 className="text-xl font-bold">Falta configurar Supabase</h2>
             <p className="text-sm leading-6 text-[var(--muted)]">Añade VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en .env.local y reinicia Vite. La aplicación no abre sin autenticación.</p></div>
           : forbidden ? <div className="space-y-4"><h2 className="text-xl font-bold">Acceso aún no habilitado</h2>
-            <p className="text-sm leading-6 text-[var(--muted)]">Tu sesión está activa, pero la primera etapa de acceso permite únicamente el rol administrador. La habilitación de otros perfiles se definirá al implementar RBAC.</p>
+            <p className="text-sm leading-6 text-[var(--muted)]">Tu cuenta todavía no tiene una membresía válida. Solicita acceso a un administrador.</p>
             <p className="break-all text-xs text-[var(--muted)]">{auth.session?.user.email ?? ''}</p>
             <Button onClick={() => void logout()} disabled={leaving}>{leaving ? 'Saliendo…' : 'Cerrar sesión'}</Button></div>
           : statusError ? <div className="space-y-4"><h2 className="text-xl font-bold">No se pudo verificar el acceso</h2>
             <p role="alert" className="text-sm text-[var(--danger)]">{auth.error}</p>
             <div className="flex flex-wrap gap-2"><Button onClick={() => void auth.retry()}><RefreshCcw size={16}/> Reintentar</Button>
               <Button onClick={() => void logout()} disabled={leaving}>Cerrar sesión</Button></div></div>
+          : firstPasswordRequired ? <form onSubmit={completePassword} className="space-y-5">
+            <div><h2 className="text-xl font-bold">Establecer contraseña personal</h2>
+              <p className="mt-2 text-sm text-[var(--muted)]">El administrador creó tu cuenta con una clave temporal. Para continuar debes establecer una nueva contraseña de al menos 12 caracteres.</p></div>
+            <label className="block text-sm font-semibold">Nueva contraseña
+              <input type="password" minLength={12} maxLength={128} autoComplete="new-password" required value={firstPassword} onChange={event => setFirstPassword(event.target.value)}
+                className="mt-2 block w-full rounded-xl border border-[var(--border)] bg-[var(--input)] px-4 py-3" />
+            </label>
+            <label className="block text-sm font-semibold">Confirmar nueva contraseña
+              <input type="password" minLength={12} maxLength={128} autoComplete="new-password" required value={firstPasswordConfirm} onChange={event => setFirstPasswordConfirm(event.target.value)}
+                className="mt-2 block w-full rounded-xl border border-[var(--border)] bg-[var(--input)] px-4 py-3" />
+            </label>
+            {passwordError && <p role="alert" className="text-xs text-[var(--danger)]">{passwordError}</p>}
+            <div className="flex flex-wrap gap-2"><Button type="submit" variant="primary" disabled={changingPassword || !firstPassword}>{changingPassword ? 'Guardando…' : 'Guardar y entrar'}</Button>
+              <Button onClick={() => void logout()} disabled={changingPassword || leaving}>Cerrar sesión</Button></div>
+          </form>
           : <form onSubmit={submit} className="space-y-5">
+            {passwordChanged && <p role="status" className="rounded-xl border border-[var(--border)] bg-[var(--muted-bg)] p-3 text-sm">Tu nueva contraseña se guardó. Inicia sesión con ella si es necesario.</p>}
             <div><div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--muted-bg)]"><KeyRound size={22}/></div>
               <h2 className="text-2xl font-extrabold tracking-tight">Iniciar sesión</h2>
-              <p className="mt-2 text-sm text-[var(--muted)]">Ingresa con la cuenta administradora registrada en Supabase.</p></div>
+              <p className="mt-2 text-sm text-[var(--muted)]">Ingresa con la cuenta asignada por el administrador de VISION AI.</p></div>
             <label className="block text-sm font-semibold">Correo electrónico
               <input autoComplete="username" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="correo@ejemplo.com" className="mt-2 block w-full rounded-xl border border-[var(--border)] bg-[var(--input)] px-4 py-3 text-sm"/></label>
@@ -78,7 +120,7 @@ export function AuthEntryPage() {
             <Button type="submit" variant="primary" className="w-full" disabled={working || !email || !password}>
               <LogIn size={17}/>{working ? 'Ingresando…' : 'Entrar a VISION AI'}</Button>
             {(formError || auth.error) && <p role="alert" className="text-sm text-[var(--danger)]">{formError || auth.error}</p>}
-            <p className="text-xs leading-5 text-[var(--muted)]">Las cuentas se crean desde la administración de Supabase. El registro público no está habilitado desde esta pantalla.</p>
+            <p className="text-xs leading-5 text-[var(--muted)]">Las cuentas las gestiona el administrador de VISION AI. El registro público no está habilitado desde esta pantalla.</p>
           </form>}
         </section>
       </div>

@@ -64,3 +64,15 @@ npm run audit:release
 ```
 
 `audit:release` verifica el artefacto que se publicará (modelo ONNX con SHA-256, WASM de ONNX Runtime, rutas SPA, archivos `.env` y patrones conocidos de secretos). GitHub Actions ejecuta la misma revisión después del build. Este control **no mide la precisión ni el rendimiento de YOLO** y tampoco sustituye las pruebas de RLS de Supabase. Los protocolos de pruebas manuales y limitaciones están en `docs/GUIA_PRUEBAS_INTERNA.md`.
+
+### Administración de usuarios (v1.9.5)
+
+El rol `administrador` dispone de la ruta protegida `/usuarios`. Para habilitarla en Supabase existente ejecuta `supabase/migrations/20261117_user_management_rbac.sql` **una sola vez** y despliega la Edge Function:
+
+```bash
+npx supabase functions deploy vision-manage-users
+```
+
+La función requiere un JWT de usuario y vuelve a comprobar la membresía de administrador en PostgreSQL. Para evitar SMTP/dominio de pago, el alta genera una contraseña temporal que se muestra una vez al administrador y que el usuario deberá reemplazar al iniciar sesión. Nunca se guardan claves secretas en el frontend. Consulta la matriz RBAC y las limitaciones multiusuario en `docs/ETAPAS.md`.
+
+Tras aplicar la actualización, ejecutar `npm install` para sincronizar `package-lock.json` con la versión de `package.json` antes de hacer commit.

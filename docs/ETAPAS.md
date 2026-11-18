@@ -508,3 +508,75 @@ Se incorpora `.github/workflows/calidad.yml` para ejecutar `npm ci`, descarga de
 - En Cámaras, la búsqueda se sitúa a la izquierda del filtro de fuente en escritorio; ambos se apilan sin desbordamiento en móviles.
 - Los `<select>` de tarjetas, filtros y formularios comparten una flecha con 0.9 rem de separación desde el extremo derecho y espacio reservado para el texto, adaptada a temas claro y oscuro.
 - No se modifican detección YOLO, reglas, alarmas, persistencia ni integraciones remotas.
+
+## v1.9.5 · Gestión de usuarios y primer RBAC (etapa 7)
+
+El PDF base define cuatro perfiles: **operador** (monitoreo), **supervisor** (reconocimiento y cierre de incidentes), **administrador** (configuración/usuarios), **auditor** (consulta y exportación). Se incorporó una matriz de navegación y controles de acciones por perfil. Las rutas se verifican además del menú lateral; la administración de cuentas se valida en la Edge Function contra la membresía real de PostgreSQL.
+
+| Módulo | Administrador | Operador | Supervisor | Auditor |
+|---|---|---|---|---|
+| Resumen | Sí | Sí | Sí | Sí |
+| Cámaras, zonas y configuración | Gestiona | No | No | No |
+| Monitoreo y captura YOLO | Sí | Sí | Sí | No |
+| Incidentes | Gestiona | Consulta | Reconoce/cierra los locales propios | Consulta |
+| Reportes locales | Sí, genera/descarga | No | No | Consulta/descarga |
+| Usuarios | Crea y cambia roles | No | No | No |
+
+**Limitación explícita:** los historiales locales son por cuenta. Los supervisores y auditores **todavía no reciben una bandeja remota compartida** de incidentes generados por otras cuentas. No se considera RBAC multiusuario completamente terminado hasta incorporar consultas compartidas, asignación de incidentes y comprobación de cada transición desde un backend confiable. Las políticas RLS protegen los datos remotos, pero el navegador no es fuente de verdad confiable para distinguir una detección YOLO legítima de un cliente modificado.
+
+### Puesta en marcha de usuarios (sin dominio ni SMTP)
+
+1. Aplicar una sola vez `supabase/migrations/20261117_user_management_rbac.sql` en Supabase SQL Editor, **después** de las migraciones anteriores. No volver a ejecutar las migraciones antiguas sobre datos productivos.
+2. Desplegar `npx supabase functions deploy vision-manage-users` tras vincular la CLI al mismo proyecto de Supabase.
+3. Abrir **Usuarios** desde una cuenta con rol `administrador`; pulsar **Agregar usuario**, indicar correo y rol.
+4. La Edge Function crea un usuario confirmado y una contraseña temporal criptográficamente aleatoria. Se muestra **una sola vez** al administrador; no se envía por correo ni se guarda en la base. Entregarla por un canal privado.
+5. El usuario inicia sesión desde el frontend y **debe cambiar** la clave temporal por una contraseña personal de al menos 12 caracteres antes de que carguen los módulos.
+6. Probar con la cuenta secundaria que no puede abrir `/usuarios` ni ejecutar la función administrativa; validar menús y permisos de módulos. Comprobar la auditoría en `vision_ai_user_audit`.
+
+**Consideraciones de seguridad:** se permite crear cuentas con correo marcado como confirmado porque el modo de contraseña temporal no depende de SMTP. El administrador debe verificar por su cuenta que la dirección corresponde al usuario legítimo. La protección del primer cambio se basa en `app_metadata` (no editable desde el navegador) y en una acción de la Edge Function autenticada. Los secretos de Supabase **nunca** se incorporan al frontend. No se crean cuentas ni se actualizan roles directamente desde la API pública del navegador. No enviar capturas ni videos a la base.
+
+### Pruebas de regresión recomendadas
+
+- Administrador anterior conserva acceso, sin forzar cambio de contraseña.
+- Alta de operador: no ve Configuración, Cámaras, Zonas ni Usuarios, y no reconoce alarmas.
+- Alta de supervisor: puede monitorear, reconocer y cerrar incidentes generados por su propia sesión; no administra usuarios.
+- Alta de auditor: solo consulta los módulos Resumen, Incidentes y Reportes locales, sin edición.
+- Un enlace directo a `/usuarios` y una invocación de la Edge Function por operador reciben denegación de acceso.
+- Cambiar el rol de otro usuario funciona; un administrador no puede modificar su propio rol.
+- El historial por cuenta, YOLO, alarmas, Resend y las dos tareas Cron no cambian en esta entrega.
+
+**Nota para repositorios ya desplegados:** esta versión modifica el campo `version` de `package.json`, sin añadir paquetes npm. Ejecutar `npm install` para actualizar el `package-lock.json` existente antes de `git push`; la auditoría `npm ci` de GitHub Actions requiere un lockfile coherente.
+
+## v1.9.6 · Historial operativo MULTIUSUARIO en Supabase (18/11/2026)
+
+**Motivo:** aunque la v1.9.5 protegía correctamente rutas y acciones RBAC, las tablas de Incidentes y Reportes seguían mostrando `localStorage` de cada identidad. Como consecuencia, un supervisor no veía incidentes creados por otra cuenta y un auditor podía encontrar las bandejas vacías. Las políticas RLS previas permitían leer filas comunes pero el frontend todavía no las consultaba.
+
+**Cambios principales:**
+- `SharedHistoryProvider` consulta `vision_incidents`, `vision_incident_audit`, `vision_reports` y la nueva `vision_report_audit` para **cualquier miembro autenticado**, preservando IDs globales por propietario/instalación e identificando el actor. Refresca a los ~12 segundos, al recuperar conexión/foco, tras envío local confirmado y tras acciones RPC. Un error remoto se muestra claramente; nunca se presenta un historial local como compartido.
+- Los módulos Incidentes, Reportes y los nuevos indicadores del Panel principal usan exclusivamente ese historial común. El rol auditor puede consultar incidentes, cronologías, informes y descargas de cualquier cuenta, pero no monitorear, reconocer, cerrar ni generar informes. Las tres tarjetas de ambos módulos, sus pestañas y `DataTable` con 5/10/20 filas se conservan.
+- Los reconocimientos y cierres manuales por administrador o supervisor son RPC atómicas `vision_act_on_incident`, incluso si el incidente lo registró otra cuenta. Bloquean la fila (`FOR UPDATE`), revisan membresía servidor, exigen una nota mínima de 10 caracteres en cierres y guardan una acción auditable con actor real. El botón flotante de Monitoreo envía antes el incidente local pendiente y usa el mismo RPC; si falla, no afirma reconocimiento.
+- El navegador que originó la observación reconcilia decisiones humanas remotas sobre **sus propios incidentes**; jamás importa incidentes ajenos al outbox de escritura local. El trigger `vision_ai_00_preserve_shared_decisions` impide reabrir un cierre o deshacer el reconocimiento por un reintento offline. El guard de autorización evita que un usuario ejecute directamente una decisión humana al margen del RPC, sin rechazar reintentos equivalentes del sensor.
+- PostgreSQL archiva informes por incidente cerrado (trigger + backfill idempotente) y genera resúmenes diarios comunes mediante RPC del administrador. La tabla `vision_report_audit` registra archivos generados por Cron/RPC y descargas de cualquiera de los roles autorizados. Se conservan intactos reportes diarios históricos generados por Cron; los existentes se registran como históricos sin atribuirles un autor inventado.
+- `ReportCenterProvider` deja de montarse en el producto: los `ReportCenter` y tests de origen local continúan en el repositorio como implementación previa, pero **los reportes de pantalla proceden de Supabase**. Los historiales de configuración y cámaras continúan locales por cuenta y no se han convertido a globales.
+
+**Instalación:** se necesita la migración nueva `supabase/migrations/20261118_shared_history_multiuser.sql` una sola vez, **después de la migración de recuperación de contraseña**; ninguna Edge Function adicional. Antes, comprobar que la v1.9.5 terminó de sincronizar incidentes locales anteriores (cursor sin pendientes), ya que el nuevo servidor obliga a crear decisiones humanas mediante RPC. El `package.json` aumenta a v1.9.6 sin dependencias nuevas: ejecutar `npm install` para actualizar `package-lock.json` del repositorio local y después `npm run test && npm run typecheck && npm run build`.
+
+**Validación multiusuario que falta verificar en Supabase real:** (1) operador A genera un incidente YOLO con la red conectada; (2) supervisor B lo ve desde otro navegador; (3) B lo reconoce; (4) operador A observa el cambio y se apaga su alarma después del refresco; (5) B registra un cierre con nota; (6) auditor C observa el incidente y acciones bajo el actor B; (7) auditor consulta el informe por incidente y el informe diario de Cron; (8) auditor descarga PDF y administrador ve la auditoría global de descarga; (9) probar dos supervisores reconociendo el mismo incidente y el segundo debe recibir conflicto; (10) probar modo offline con reconexión sin reabrir cierres ni duplicar auditorías. Estas pruebas no se consideran aprobadas hasta ejecutarlas en el proyecto remoto real.
+
+**Límites y decisiones:** sincronización periódica de ~12 s no es WebSocket ni garantía de tiempo real. Si un cliente no ha enviado incidentes a Supabase, los demás todavía no pueden verlos. No hay captura continua al cerrar navegador, no se valida el origen físico de YOLO, la configuración de cámaras/zonas permanece por cuenta y el reporte es un snapshot estructurado. Sin imágenes/videos ni cambios en los trabajos Cron o Resend. Por seguridad, las acciones entre usuarios requieren conexión a Supabase; no se ejecutan en modo offline.
+
+### Hotfix v1.9.6 — lectura parcial y diagnóstico de RPC (18/11/2026)
+
+- Problema detectado en la prueba real supervisor/operador: `PGRST202` / «Could not find the function public.vision_act_on_incident(p_action, p_incident_id, p_note) in the schema cache». La firma del frontend coincide con la del archivo SQL; este error se resuelve comprobando que la migración `20261118_shared_history_multiuser.sql` esté aplicada al proyecto Supabase usado por el frontend y recargando el esquema de PostgREST (`NOTIFY pgrst, 'reload schema';`) si la función ya existe. Ninguna compilación local o despliegue de Vercel ejecuta automáticamente las migraciones de SQL Editor.
+- Defecto visual independiente: `SharedHistoryProvider` usaba `Promise.all`, de modo que el error de `vision_report_audit` cancelaba incluso la consulta exitosa de `vision_incidents`. Se usa `Promise.allSettled` y se registran errores separados para Incidentes, Auditoría de acciones, Reportes y Auditoría de reportes. Se preservan los últimos datos recibidos del apartado afectado mientras se indica el error, sin mezclar datos de cuentas.
+- El Panel principal distingue la disponibilidad de indicadores de incidentes y reportes. La descarga de informes permanece bloqueada cuando no puede verificarse la disponibilidad de la auditoría, y los errores RPC de esquema tienen explicación específica sin cambiar permisos.
+- Ejecutar `supabase/diagnostics/20261118_verificar_historial_multiusuario.sql` en SQL Editor, comprobar la firma, tabla de auditoría y conteo de incidentes. Si faltan, aplicar la migración original v1.9.6; no repetir migraciones anteriores ni insertar incidentes manualmente. Si existen pero PostgREST no los ve, ejecutar `NOTIFY pgrst, 'reload schema';`.
+- Validación pendiente: RPC desde supervisor y auditoría registrada; lectura cruzada bajo supervisor y auditor, sincronización local de operador y carga de reportes. Los tests de React no sustituyen las pruebas contra Supabase real.
+
+### Ajuste de preferencias personales (18/11/2026, posterior a v1.9.6)
+
+- **Nombre visible:** se puede editar desde **Configuración → General → Perfil de usuario**, con validación de 2 a 60 caracteres, y aparece en la tarjeta de cuenta de la barra superior. La preferencia se guarda mediante `supabase.auth.updateUser({ data: { vision_ai_display_name } })` en `user_metadata` de la **identidad autenticada**, no en `app_metadata` ni en tablas de roles. El correo permanece como identificador de ingreso; si no se configuró un nombre, se conserva como respaldo el texto anterior a `@`.
+- **Temas:** en el menú de usuario se muestran **Claro / Oscuro / Automático**. Automático sigue `prefers-color-scheme: dark` mediante `matchMedia` y actualiza la vista cuando cambia la preferencia del sistema. La opción seleccionada se conserva en el `localStorage` del navegador bajo la misma clave anterior `vision-3d-theme`, por lo que los valores anteriores `light` y `dark` siguen funcionando. El tema claro continúa siendo el predeterminado en instalaciones sin preferencia.
+- **Permisos:** los cuatro roles pueden abrir `/configuracion` para editar **sus propias preferencias**. Solo el administrador sigue viendo y utilizando configuración de cámaras, importación JSON, versiones y auditoría local. La autorización de `/usuarios`, `/camaras` y `/zonas` no cambia.
+- **Despliegue:** parche exclusivamente de frontend; **sin migración SQL, Edge Function ni secretos nuevos**. Aplicar los archivos sobre la v1.9.6 con su hotfix de historial, ejecutar `npm run test && npm run typecheck && npm run build` y verificar edición de nombre en otra sesión, contraste de temas y RBAC.
+- **Límite:** el tema visual es una preferencia del navegador, no se sincroniza entre dispositivos. El nombre sí viaja con la cuenta de Supabase; no altera el actor/correo usado para auditar las decisiones remotas.
