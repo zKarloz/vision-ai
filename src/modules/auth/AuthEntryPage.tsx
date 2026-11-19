@@ -63,12 +63,12 @@ export function AuthEntryPage() {
   }
 
   return <div className="flex min-h-screen flex-col bg-[var(--page)] text-[var(--text)]">
-    <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
+    {!loading && <header className="flex h-[70px] w-full shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/95 px-5 md:px-8">
       <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--primary)] text-[var(--primary-text)]"><ShieldCheck size={22}/></div>
         <span className="font-extrabold tracking-tight">VISION AI</span></div>
       <button type="button" className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--border)] bg-[var(--card)]" onClick={toggle}
         aria-label={theme === 'light' ? 'Activar tema oscuro' : 'Activar tema claro'}>{theme === 'light' ? <Moon size={18}/> : <Sun size={18}/>}</button>
-    </header>
+    </header>}
     <main className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-5 pb-16 pt-8">
       <div className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl lg:grid-cols-[0.9fr_1.1fr]">
         <section className="flex flex-col justify-between gap-12 bg-[var(--sidebar)] p-8 text-[var(--sidebar-text)] md:p-10">
@@ -125,6 +125,6 @@ export function AuthEntryPage() {
         </section>
       </div>
     </main>
-    <footer className="pb-6 text-center text-xs text-[var(--muted)]">VISION AI · Sistema de monitoreo visual</footer>
+    {!loading && <footer className="pb-6 text-center text-xs text-[var(--muted)]">VISION AI · Sistema de monitoreo visual</footer>}
   </div>;
 }

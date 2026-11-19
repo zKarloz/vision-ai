@@ -9,6 +9,7 @@ import { DataTable, type TableColumn } from '../../shared/components/DataTable';
 import { Modal } from '../../shared/components/Modal';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
+import { Spinner } from '../../shared/components/Spinner';
 
 const options: MemberRole[] = ['operador', 'supervisor', 'auditor', 'administrador'];
 const inputStyle = 'mt-1 block w-full rounded-xl border border-[var(--border)] bg-[var(--input)] px-3 py-2.5 text-sm text-[var(--text)]';
@@ -19,6 +20,7 @@ export function UsersPage() {
   const { session, role } = useAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [firstLoad, setFirstLoad] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -36,7 +38,7 @@ export function UsersPage() {
     setLoading(true); setError('');
     try { setUsers(await listManagedUsers()); }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo consultar usuarios.'); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setFirstLoad(false); }
   }
   useEffect(() => { void load(); }, []);
 
@@ -95,9 +97,9 @@ export function UsersPage() {
     <PageHeader title="Usuarios" description="Crea cuentas, asigna roles y controla qué módulos pueden utilizar. Las operaciones se verifican desde Supabase."
       actions={<Button variant="primary" onClick={() => { setCreateOpen(true); setError(''); }}><UserRoundPlus size={16}/> Agregar usuario</Button>}/>
     <section className="mb-5 grid gap-3 sm:grid-cols-3">
-      <Panel className="p-4"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><UsersRound size={15}/> Cuentas registradas</p><p className="mt-2 text-2xl font-bold">{users.length}</p></Panel>
-      <Panel className="p-4"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><ShieldCheck size={15}/> Administradores</p><p className="mt-2 text-2xl font-bold">{users.filter(user => user.role === 'administrador').length}</p></Panel>
-      <Panel className="p-4"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><UsersRound size={15}/> Otros roles</p><p className="mt-2 text-2xl font-bold">{users.filter(user => user.role !== 'administrador').length}</p></Panel>
+      <Panel className="p-4"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><UsersRound size={15}/> Cuentas registradas</p><p className="mt-2 text-2xl font-bold">{firstLoad ? '—' : users.length}</p></Panel>
+      <Panel className="p-4"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><ShieldCheck size={15}/> Administradores</p><p className="mt-2 text-2xl font-bold">{firstLoad ? '—' : users.filter(user => user.role === 'administrador').length}</p></Panel>
+      <Panel className="p-4"><p className="flex items-center gap-2 text-xs text-[var(--muted)]"><UsersRound size={15}/> Otros roles</p><p className="mt-2 text-2xl font-bold">{firstLoad ? '—' : users.filter(user => user.role !== 'administrador').length}</p></Panel>
     </section>
     {error && <p className="mb-4 rounded-xl border border-[var(--danger)] p-3 text-sm text-[var(--danger)]" role="alert">{error}</p>}
     {message && <p className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--muted-bg)] p-3 text-sm" role="status">{message}</p>}
@@ -105,9 +107,10 @@ export function UsersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 p-5">
         <div><h2 className="text-sm font-bold">Directorio de usuarios</h2><p className="mt-1 text-xs text-[var(--muted)]">La contraseña no se guarda ni se muestra después del alta.</p></div>
         <div className="flex flex-wrap items-center gap-2"><input aria-label="Buscar usuarios" placeholder="Buscar por correo o rol…" value={search} onChange={event => setSearch(event.target.value)} className="w-60 rounded-xl border border-[var(--border)] bg-[var(--input)] px-3 py-2 text-xs"/>
-          <Button size="sm" disabled={loading} onClick={() => void load()}><RefreshCcw size={14}/> Actualizar</Button></div>
+          <Button size="sm" disabled={loading} onClick={() => void load()}>{loading ? <Spinner label="Actualizando…"/> : <><RefreshCcw size={14}/> Actualizar</>}</Button></div>
       </div>
-      <DataTable accessibleName="Directorio de usuarios" rows={filtered} columns={columns} getRowKey={row => row.id} emptyMessage={loading ? 'Cargando cuentas…' : 'No hay usuarios con estos filtros.'}/>
+      {firstLoad && loading ? <div className="grid min-h-60 place-items-center border-t border-[var(--border)] px-5 py-10"><Spinner label="Cargando usuarios desde Supabase…"/></div>
+        : <DataTable accessibleName="Directorio de usuarios" rows={filtered} columns={columns} getRowKey={row => row.id} emptyMessage="No hay usuarios con estos filtros."/>}
     </Panel>
     <p className="mt-4 text-xs text-[var(--muted)]">La primera contraseña es temporal y debe cambiarse al iniciar sesión. El alta mediante contraseña temporal evita depender de SMTP y de un dominio propio.</p>
     <Modal title="Agregar usuario" description="El servidor crea una contraseña temporal aleatoria y asigna la membresía indicada." open={createOpen} onClose={() => { if (!busy) setCreateOpen(false); }}>

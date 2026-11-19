@@ -7,6 +7,7 @@ import { DataTable, type TableColumn } from '../../shared/components/DataTable';
 import { Modal } from '../../shared/components/Modal';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
+import { Spinner } from '../../shared/components/Spinner';
 import { Tabs } from '../../shared/components/Tabs';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { canAcknowledgeIncident } from '../../application/remote/accessPolicy';
@@ -87,7 +88,7 @@ export function IncidentsPage() {
     <PageHeader title="Incidentes y auditoría"
       description="Historial común de todos los usuarios autorizado por Supabase. Reconocimientos y cierres se registran con identidad y auditoría remotas."
       actions={<><Button onClick={() => void shared.refresh()}><RefreshCcw size={16}/> Actualizar</Button><Button onClick={exportAudit} disabled={!shared.loaded || Boolean(shared.error) || !shared.incidents.length}><Download size={16}/> Exportar historial JSON</Button></>}/>
-    {!shared.loaded && !shared.error && <p role="status" className="mb-4 text-xs text-[var(--muted)]">Consultando historial común en Supabase…</p>}
+    {!shared.loaded && !shared.error && <div className="mb-4"><Spinner label="Consultando historial común en Supabase…"/></div>}
     {shared.error && <p role="alert" className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--danger-bg)] p-3 text-xs text-[var(--danger)]">No se pudo actualizar la tabla de incidentes: {shared.error}. {shared.loaded ? 'Se muestran los últimos datos recibidos.' : 'No se presentan datos locales como si fueran compartidos.'}</p>}
     {shared.auditError && <p role="alert" className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--danger-bg)] p-3 text-xs text-[var(--danger)]">La auditoría de acciones no está disponible: {shared.auditError}. Los incidentes continúan consultándose por separado.</p>}
     <section className="mb-5 grid gap-3 sm:grid-cols-3" aria-label="Resumen de incidentes">

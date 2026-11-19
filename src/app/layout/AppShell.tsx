@@ -16,8 +16,8 @@ const nav: { to: string; text: string; icon: typeof LayoutDashboard; module: Pro
   { to: '/zonas', module: 'zonas', text: 'Zonas y reglas', icon: Layers3 },
   { to: '/incidentes', module: 'incidentes', text: 'Incidentes', icon: BellRing },
   { to: '/reportes', module: 'reportes', text: 'Reportes', icon: BarChart3 },
-  { to: '/configuracion', module: 'configuracion', text: 'Configuración', icon: Settings2 },
   { to: '/usuarios', module: 'usuarios', text: 'Usuarios', icon: UsersRound },
+  { to: '/configuracion', module: 'configuracion', text: 'Configuración', icon: Settings2 },
 ];
 
 const accountAction = 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text)] transition-colors hover:bg-[var(--muted-bg)] focus-visible:outline-2';

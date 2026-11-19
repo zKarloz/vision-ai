@@ -8,6 +8,7 @@ import { Button } from '../../shared/components/Button';
 import { DataTable, type TableColumn } from '../../shared/components/DataTable';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
+import { Spinner } from '../../shared/components/Spinner';
 import { StatusBadge } from '../../shared/components/StatusBadge';
 import { Tabs } from '../../shared/components/Tabs';
 import { RemoteConnectionPanel } from './RemoteConnectionPanel';
@@ -69,7 +70,7 @@ export function ReportsPage() {
     <PageHeader title="Reportes y bandeja"
       description="Informes y auditoría compartidos en Supabase para todas las cuentas autorizadas. Los informes diarios por correo siguen siendo gestionados por Cron."
       actions={<Button onClick={() => void shared.refresh()}><RefreshCcw size={16}/> Actualizar</Button>}/>
-    {!shared.reportsLoaded && !shared.reportsError && <p role="status" className="mb-4 text-xs text-[var(--muted)]">Consultando informes de todos los usuarios…</p>}
+    {!shared.reportsLoaded && !shared.reportsError && <div className="mb-4"><Spinner label="Consultando informes de todos los usuarios…"/></div>}
     {shared.reportsError && <p role="alert" className="mb-4 rounded-xl bg-[var(--danger-bg)] p-3 text-xs text-[var(--danger)]">Error consultando informes: {shared.reportsError}. {shared.reportsLoaded ? 'Datos anteriores; los cambios requieren conexión.' : 'No se presentan reportes locales como compartidos.'}</p>}
     {shared.reportAuditError && <p role="alert" className="mb-4 rounded-xl bg-[var(--danger-bg)] p-3 text-xs text-[var(--danger)]">La auditoría de reportes no está disponible: {shared.reportAuditError}. Los informes se consultan independientemente; la descarga requiere auditoría operativa.</p>}
     <section className="mb-5 grid gap-3 md:grid-cols-3" aria-label="Estadísticas de reportes">
