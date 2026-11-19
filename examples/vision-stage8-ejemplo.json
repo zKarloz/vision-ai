@@ -1,0 +1,16 @@
+{
+  "schema": "vision-ai-eval-v1",
+  "dataset": "EJEMPLO-SINTETICO-NO-VALIDACION",
+  "frames": [
+    {
+      "cameraId": "CAM-02", "frameId": "ejemplo-001",
+      "truth": [{ "class": "persona", "box": { "x": 0.3, "y": 0.2, "width": 0.2, "height": 0.5 } }],
+      "predictions": [{ "class": "persona", "confidence": 0.9, "box": { "x": 0.31, "y": 0.2, "width": 0.2, "height": 0.5 } }]
+    },
+    {
+      "cameraId": "CAM-02", "frameId": "ejemplo-002",
+      "truth": [{ "class": "cono", "box": { "x": 0.6, "y": 0.6, "width": 0.1, "height": 0.2 } }],
+      "predictions": []
+    }
+  ]
+}

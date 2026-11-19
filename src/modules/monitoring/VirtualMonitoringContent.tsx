@@ -1,7 +1,7 @@
 import { useState, type MouseEvent } from 'react';
 import {
   AlertCircle, ArrowRight, Camera, CheckCircle2, CircleDot, Cpu, Eye, Focus,
-  Pause, Play, RotateCcw, Scan, ShieldAlert, ShieldCheck, Square, Video,
+  Pause, Play, RotateCcw, Scan, ShieldAlert, ShieldCheck, Square, Video, Construction,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCameraRegistry } from '../../app/providers/CameraRegistryProvider';
@@ -13,6 +13,7 @@ import { Panel } from '../../shared/components/Panel';
 import { StatusBadge } from '../../shared/components/StatusBadge';
 import { CAPTURE_INTERVAL_OPTIONS, captureIntervalLabel, isHighLoadCaptureInterval, parseCaptureIntervalMs } from './captureInterval';
 import { useVirtualMonitoring } from './useVirtualMonitoring';
+import { PerformanceDiagnostics } from './PerformanceDiagnostics';
 import { trackVisualState } from './trackVisualState';
 
 const control = 'rounded-xl border border-[var(--border)] bg-[var(--input)] px-3 py-2 text-sm text-[var(--text)]';
@@ -74,7 +75,8 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
       analysisIntervalMs: monitor.intervalMs, zone: monitor.zone,
       metrics: { samples: monitor.samples.length, fps: monitor.fps, averageInferenceMs: monitor.averageMs },
       incidents: monitor.incidents, eventLog: monitor.log, samples: monitor.samples, analyses: monitor.analyses,
-      note: 'La escena es 3D sintética; las detecciones se infieren con YOLO en un Worker único, no de posiciones geométricas. La suma por cámara puede contar dos veces a una persona visible en múltiples ángulos.',
+      cautionDemo: { source: 'DEMO — trayectoria 3D, sin detección de cono por YOLO', events: monitor.cautionDemoLog },
+      note: 'Las detecciones de personas provienen de YOLO. La DEMO de conos usa trayectorias 3D predefinidas, queda separada del historial oficial y nunca activa sirena. Los conteos multicámara pueden duplicar personas.',
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
     const anchor = document.createElement('a');
@@ -124,6 +126,12 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
           <canvas ref={monitor.sceneCanvasRef} className="block aspect-video w-full" aria-label="Escenario industrial 3D de la cámara seleccionada"/>
           {monitor.worldError && <div role="alert" className="absolute inset-0 grid place-items-center bg-[var(--page)] p-6 text-center text-sm">{monitor.worldError}</div>}
           <span className="absolute bottom-3 left-3 rounded-lg bg-black/70 px-3 py-1.5 text-xs font-semibold text-white">{monitor.cameraId} · Vista 3D</span>
+          {monitor.snapshot?.cautionNoticeActive && (
+            <div role="status" aria-live="polite" className="pointer-events-none absolute right-3 top-3 max-w-[min(88%,280px)] rounded-xl border border-amber-400/80 bg-amber-50/95 px-3 py-2 text-amber-950 shadow-lg">
+              <span className="flex items-center gap-2 text-xs font-bold"><Construction size={16}/> DEMO · Precaución</span>
+              <p className="mt-1 text-[11px] leading-4">Operario próximo a conos. Aviso visual sin sirena.</p>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex flex-wrap gap-2">
@@ -133,6 +141,34 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
             <Button size="sm" onClick={monitor.resetWorld}><RotateCcw size={15}/> Reiniciar</Button>
           </div>
           <span className="text-xs text-[var(--muted)]">Tiempo de escena: {fmt(monitor.snapshot?.elapsedSeconds ?? 0)} s</span>
+        </div>
+        <div className="border-t border-[var(--border)] px-4 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 text-sm font-bold"><Construction size={17} className="text-amber-600"/> DEMO de precaución por conos</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Un operario virtual se acerca a los conos y se aleja. La proximidad se calcula desde la escena 3D, <strong>no la detecta YOLO</strong>.</p>
+            </div>
+            <Button size="sm" variant={monitor.snapshot?.cautionDemoEnabled ? 'secondary' : 'primary'} disabled={Boolean(monitor.worldError)}
+              aria-pressed={Boolean(monitor.snapshot?.cautionDemoEnabled)}
+              onClick={() => monitor.setCautionDemoEnabled(!monitor.snapshot?.cautionDemoEnabled)}>
+              {monitor.snapshot?.cautionDemoEnabled ? <Square size={14}/> : <Play size={14}/>}
+              {monitor.snapshot?.cautionDemoEnabled ? 'Detener DEMO' : 'Iniciar DEMO conos'}
+            </Button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" role="status">
+            <span className="rounded-lg border border-amber-300 bg-amber-100 px-2 py-1 font-bold text-amber-900">SIMULACIÓN · Sin sirena</span>
+            <span className="text-[var(--muted)]">{monitor.snapshot?.cautionNoticeActive ? 'Aviso ámbar activo: proximidad confirmada' : monitor.snapshot?.cautionDemoEnabled ? monitor.snapshot.running ? 'Recorrido en ejecución' : 'Escenario pausado' : 'Demo inactiva'}</span>
+          </div>
+          {monitor.cautionDemoLog.length > 0 && (
+            <div className="mt-3 space-y-1 border-t border-[var(--border)] pt-3" aria-label="Registro local de la demostración de conos">
+              <p className="text-[11px] font-semibold text-[var(--muted)]">Eventos DEMO de esta sesión (no sincronizados)</p>
+              {monitor.cautionDemoLog.slice(0, 3).map((event, i) => (
+                <p key={`${event.atSeconds}-${i}`} className="text-xs text-[var(--muted)]">
+                  <span className="font-semibold text-[var(--text)]">DEMO</span> · {event.type === 'near' ? 'Precaución: operario cerca de un cono' : 'Precaución finalizada'} · t = {fmt(event.atSeconds)} s
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </Panel>
 
@@ -225,11 +261,17 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
             { label: 'Último ciclo completo', value: monitor.inferenceTotalMs === null ? '—' : `${fmt(monitor.inferenceTotalMs)} ms` },
           ].map(metric => <div className="rounded-xl bg-[var(--muted-bg)] p-3" key={metric.label}><p className="text-[11px] text-[var(--muted)]">{metric.label}</p><p className="mt-1.5 text-lg font-bold tabular-nums">{metric.value}</p></div>)}
         </div>
+        <PerformanceDiagnostics
+          cameras={monitor.virtualCameraIds.map(id => ({ cameraId: id,
+            samples: monitor.analyses[id]?.samples ?? [], scanning: Boolean(monitor.cameraStats[id]?.scanning) }))}
+          provider={monitor.provider} source="virtual-3d" mode={monitor.mode}
+          intervalMs={monitor.intervalMs} threshold={monitor.threshold}
+          foregroundSinceMs={monitor.foregroundSinceMs} visible={monitor.pageVisible && monitor.modelState === 'ready'}/>
         <p className="mb-3 text-[11px] text-[var(--muted)]">Al ocultar esta pestaña, el análisis se pausa; al regresar, el indicador se recalcula con nuevas capturas sin reiniciar YOLO.</p>
         <p className="mt-4 text-xs leading-5 text-[var(--muted)]">La salida del modelo es auténtica y puede tener omisiones. Las coordenadas de los personajes 3D no se usan para obtener detecciones. Los resultados permanecen en memoria durante esta sesión.</p>
       </Panel>
       <Panel className="p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-bold">Incidentes de visión computacional</h2><p className="mt-1 text-xs text-[var(--muted)]">Reglas y confirmación configurables por cámara · cooldown por track</p></div><Button size="sm" onClick={exportSession} disabled={!Object.values(monitor.analyses).some(item => item.samples.length)}>Exportar JSON <ArrowRight size={14}/></Button></div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-bold">Incidentes de visión computacional</h2><p className="mt-1 text-xs text-[var(--muted)]">Reglas y confirmación configurables por cámara · cooldown por track</p></div><Button size="sm" onClick={exportSession} disabled={!Object.values(monitor.analyses).some(item => item.samples.length) && !monitor.cautionDemoLog.length}>Exportar JSON <ArrowRight size={14}/></Button></div>
         <div className="max-h-64 space-y-2 overflow-auto">
           {monitor.log.length === 0 && <div className="flex items-center gap-2 rounded-xl border border-dashed border-[var(--border)] p-5 text-xs text-[var(--muted)]"><ShieldCheck size={19}/> Sin eventos confirmados por YOLO en esta sesión.</div>}
           {monitor.log.map(event => <div key={event.key} className="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
@@ -243,7 +285,7 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
     </div>
     <div className="mt-5 flex flex-wrap items-start gap-3 rounded-xl border border-[var(--notice-border)] bg-[var(--notice-bg)] p-4 text-xs leading-5 text-[var(--muted)]">
       <AlertCircle size={18} className="shrink-0 text-[var(--accent)]"/>
-      <p><strong className="text-[var(--text)]">Alcance de las cámaras 3D.</strong> Todas las perspectivas virtuales comparten una escena y un Worker YOLO, con seguimiento independiente. Las fuentes MP4/WebM y webcam ya se pueden conectar desde el selector superior; cámaras virtuales configurables desde el gestor, RTSP y almacenamiento remoto siguen pendientes. El modelo actual solo detecta personas; el historial de incidentes se conserva localmente.</p>
+      <p><strong className="text-[var(--text)]">Alcance de las cámaras 3D.</strong> Todas las perspectivas virtuales comparten una escena y un Worker YOLO, con seguimiento independiente. Las fuentes MP4/WebM y webcam ya se pueden conectar desde el selector superior; cámaras virtuales configurables desde el gestor, RTSP y almacenamiento remoto siguen pendientes. El modelo actual solo detecta personas; la demostración de conos es independiente de YOLO y no forma parte del historial oficial.</p>
     </div>
   </>;
 }

@@ -3,6 +3,8 @@ import type { Camera } from '../../core/domain/camera';
 import { sweepPoseAt, virtualPoseFor, type VirtualCameraPose, type VirtualCameraSweep } from '../../core/domain/virtualCameraPose';
 import { isPointInsidePolygon, restrictedZone, workerRestrictedPath, ZonePresenceRule } from '../../domain/rules';
 import { createWorkerCharacter, type CharacterModel } from './CharacterFactory';
+import { createPrecautionArea } from './PrecautionArea';
+import { cautionWorkerPosition, PrecautionDemoRule, nearestCautionConeDistance, type CautionDemoEvent } from './PrecautionDemo';
 
 export type CameraId = string;
 export type SimulationEvent = { type: 'opened' | 'closed'; cameraId: 'CAM-02'; atSeconds: number; inZone: boolean };
@@ -13,6 +15,9 @@ export type SimulationSnapshot = {
   zoneConfirmed: boolean;
   positionX: number;
   running: boolean;
+  cautionDemoEnabled: boolean;
+  cautionNoticeActive: boolean;
+  cautionDistance: number | null;
 };
 
 /** El mundo 3D no depende de React ni del modelo de visión. */
@@ -26,6 +31,10 @@ export class SimulationWorld {
   private readonly guard = new ZonePresenceRule(550, 900);
   private readonly workerOne: THREE.Group;
   private readonly workerTwo: THREE.Group;
+  private readonly cautionWorker: THREE.Group;
+  private readonly cautionRule = new PrecautionDemoRule();
+  private cautionDemoEnabled = false;
+  private cautionElapsed = 0;
   private readonly armParts: Array<{ a: THREE.Group; b: THREE.Group }> = [];
   private lastFrame = 0;
   private lastUiTime = 0;
@@ -40,6 +49,8 @@ export class SimulationWorld {
     private readonly canvas: HTMLCanvasElement,
     private readonly onUpdate: (state: SimulationSnapshot) => void,
     private readonly onEvent: (event: SimulationEvent) => void,
+    // Canal separado: NO se conecta al motor de incidentes ni a YOLO.
+    private readonly onCautionDemoEvent: (event: CautionDemoEvent) => void = () => {},
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -73,6 +84,9 @@ export class SimulationWorld {
     this.addFloorAndStructure();
     this.addWarehouse();
     this.addMachinery();
+    // Sector de precaución compartido por todas las cámaras virtuales.
+    this.scene.add(createPrecautionArea());
+    this.addSign('ÁREA DE PRECAUCIÓN', 0.45, -5.95, '#986216');
     this.zoneFill = this.addRestrictedZone();
     // Los dos operarios utilizan el mismo diseño anatómico C, sin selector A/B.
     const warehouse = createWorkerCharacter('#407b9b', '#ffc34e');
@@ -83,6 +97,13 @@ export class SimulationWorld {
     this.workerTwo = machinery.group;
     this.scene.add(this.workerTwo);
     this.registerLimbAnimation(machinery);
+    // Este trabajador sólo existe como geometría de DEMO; oculto por defecto.
+    const demo = createWorkerCharacter('#668e80', '#f7bc48');
+    this.cautionWorker = demo.group;
+    this.cautionWorker.name = 'Operario de demostración de conos';
+    this.cautionWorker.visible = false;
+    this.scene.add(this.cautionWorker);
+    this.registerLimbAnimation(demo);
     this.workerOne.position.set(-7.1, 0, 0.4);
     this.workerTwo.position.set(3.9, 0, -0.1);
     this.resize();
@@ -219,6 +240,14 @@ export class SimulationWorld {
     this.workerTwo.rotation.y = restrictedPath.x >= oldX ? Math.PI / 2 : -Math.PI / 2;
     this.workerOne.position.set(-7.0 + Math.sin(this.elapsed * 0.57) * 0.72, 0, 0.9 + Math.cos(this.elapsed * 0.57) * 0.42);
     this.workerOne.rotation.y = this.elapsed * 0.57;
+    if (this.cautionDemoEnabled) {
+      const previousX = this.cautionWorker.position.x;
+      const position = cautionWorkerPosition(this.cautionElapsed);
+      this.cautionWorker.position.set(position.x, 0, position.z);
+      this.cautionWorker.rotation.y = position.x < previousX ? -Math.PI / 2 : Math.PI / 2;
+      const event = this.cautionRule.update(this.cautionElapsed);
+      if (event) this.onCautionDemoEvent(event);
+    }
     this.armParts.forEach((limb, i) => {
       const phase = Math.sin(this.elapsed * (i < 2 ? 5 : 4.6)) * 0.34;
       limb.a.rotation.x = phase;
@@ -239,6 +268,7 @@ export class SimulationWorld {
     this.lastFrame = now;
     if (this.running) {
       this.elapsed += delta;
+      if (this.cautionDemoEnabled) this.cautionElapsed += delta;
       this.updatePersons();
     }
     // Barrido automático suave; renderizado y captura de YOLO usan la misma orientación.
@@ -258,6 +288,25 @@ export class SimulationWorld {
   }
 
   setRunning(running: boolean): void { this.running = running; this.publish(); }
+
+  /** Activación explícita: ningún evento DEMO se registra como incidente real. */
+  setCautionDemoEnabled(enabled: boolean): void {
+    if (this.cautionDemoEnabled === enabled) return;
+    if (!enabled) {
+      const finalEvent = this.cautionRule.stop(this.cautionElapsed);
+      if (finalEvent) this.onCautionDemoEvent(finalEvent);
+    } else {
+      this.cautionElapsed = 0;
+      this.cautionRule.reset();
+    }
+    this.cautionDemoEnabled = enabled;
+    this.cautionWorker.visible = enabled;
+    if (enabled) {
+      const initial = cautionWorkerPosition(0);
+      this.cautionWorker.position.set(initial.x, 0, initial.z);
+    }
+    this.publish();
+  }
   get isRunning(): boolean { return this.running; }
   /** Reutiliza Three.Scene; solamente añade/actualiza/elimina perspectivas. */
   setVirtualCameras(cameras: readonly Pick<Camera, 'id' | 'sourceType' | 'virtualPose' | 'virtualSweep'>[]): void {
@@ -304,6 +353,16 @@ export class SimulationWorld {
     this.elapsed = 0;
     this.guard.reset();
     this.zoneActive = false;
+    // Si había una advertencia activa, se anota su cierre al reiniciar.
+    const finalCaution = this.cautionRule.stop(this.cautionElapsed);
+    if (finalCaution) this.onCautionDemoEvent(finalCaution);
+    // Reiniciar la secuencia visual no reabre avisos previos.
+    this.cautionElapsed = 0;
+    this.cautionRule.reset();
+    if (this.cautionDemoEnabled) {
+      const initial = cautionWorkerPosition(0);
+      this.cautionWorker.position.set(initial.x, 0, initial.z);
+    }
     this.updatePersons();
     this.publish();
   }
@@ -316,6 +375,9 @@ export class SimulationWorld {
       zoneConfirmed: this.guard.isOccupied,
       positionX: this.workerTwo.position.x,
       running: this.running,
+      cautionDemoEnabled: this.cautionDemoEnabled,
+      cautionNoticeActive: this.cautionDemoEnabled && this.cautionRule.isActive,
+      cautionDistance: this.cautionDemoEnabled ? nearestCautionConeDistance(this.cautionWorker.position) : null,
     });
   }
 
@@ -337,7 +399,12 @@ export class SimulationWorld {
     camera.aspect = 640 / 480;
     camera.zoom = zoom; // Únicamente el encuadre de YOLO; no modifica la cámara principal.
     camera.updateProjectionMatrix();
-    this.captureRenderer.render(this.scene, camera);
+    // El operario ficticio se excluye deliberadamente de los fotogramas YOLO:
+    // su aparición visual NO debe generar detecciones/alertas oficiales.
+    const wasDemoVisible = this.cautionWorker.visible;
+    this.cautionWorker.visible = false;
+    try { this.captureRenderer.render(this.scene, camera); }
+    finally { this.cautionWorker.visible = wasDemoVisible; }
     const context = preview.getContext('2d');
     if (context) context.drawImage(this.captureRenderer.domElement, 0, 0, preview.width, preview.height);
     return createImageBitmap(this.captureRenderer.domElement);

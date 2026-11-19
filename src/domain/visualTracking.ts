@@ -22,6 +22,8 @@ export interface VisionEvent {
   atMs: number;
   confidence: number;
   source: 'yolo';
+  /** Caja observada, no identificador biométrico; se utiliza para detectar fragmentación del track. */
+  box?: Detection['box'];
 }
 export interface VisionStepResult { tracks: VisionTrack[]; events: VisionEvent[] }
 
@@ -33,6 +35,12 @@ export interface TrackingOptions {
   confirmFrames: number;
   exitFrames: number;
   maxMisses: number;
+  /**
+   * Gracia temporal opcional para no retirar un track por varios fotogramas vacíos
+   * consecutivos. Es útil en video 3D con detecciones intermitentes (reloj monotónico).
+   * No conserva una persona fuera de la zona ni confirma su salida automáticamente.
+   */
+  lossGraceMs?: number;
   /** Distancia normalizada máxima entre centros de dos cajas consecutivas. */
   maxCenterDistance: number;
 }
@@ -67,6 +75,12 @@ export class VisualZoneMonitor {
     for (let ti = 0; ti < previous.length; ti++) {
       for (let di = 0; di < detections.length; di++) {
         const old = previous[ti]; const det = detections[di];
+        // No reutilizar el track si el reloj avanza más allá de la gracia,
+        // aunque aún no haya fotogramas marcados como perdidos. Esto sucede si
+        // el navegador se suspende o la cámara deja de entregar imágenes.
+        // Sin gracia temporal se mantiene la política clásica por fotogramas.
+        if (this.options.lossGraceMs !== undefined &&
+          atMs - old.lastSeenAt > this.options.lossGraceMs) continue;
         const overlap = intersectionOverUnion(old.box, det.box);
         const dist = centerDistance(old.box, det.box);
         if (overlap >= 0.08 || dist <= this.options.maxCenterDistance) {
@@ -89,7 +103,7 @@ export class VisualZoneMonitor {
     const zonePolygon = zone?.cameraId === cameraId ? zone.polygon : null;
     const emit = (track: InternalTrack, type: VisionEvent['type']) => events.push({
       id: this.nextEventId++, trackId: track.id, cameraId, type, atMs,
-      confidence: track.confidence, source: 'yolo',
+      confidence: track.confidence, source: 'yolo', box: { ...track.box },
     });
 
     for (let ti = 0; ti < previous.length; ti++) {
@@ -102,7 +116,13 @@ export class VisualZoneMonitor {
         track.seen = false;
         track.state = 'unknown';
         // Una pérdida de imagen no equivale a una salida de la zona.
-        if (track.missed >= this.options.maxMisses) {
+        // Con gracia 3D, el reloj es la referencia: una pausa larga debe
+        // caducar el seguimiento incluso en la primera captura posterior.
+        // Sin gracia se conserva el criterio clásico de maxMisses.
+        const expired = this.options.lossGraceMs === undefined
+          ? track.missed >= this.options.maxMisses
+          : atMs - track.lastSeenAt > this.options.lossGraceMs;
+        if (expired) {
           if (track.alertOpen) emit(track, 'lost');
           continue;
         }

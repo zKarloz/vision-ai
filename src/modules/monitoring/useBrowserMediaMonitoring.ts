@@ -15,7 +15,7 @@ import { OnnxWorkerVisionEngine } from '../../infrastructure/vision/OnnxWorkerVi
 import { recentAnalysisFps } from './analysisPerformance';
 import { DEFAULT_CAPTURE_INTERVAL_MS, type CaptureIntervalMs } from './captureInterval';
 
-interface AnalysisSample { atMs: number; inferenceMs: number; detections: number }
+interface AnalysisSample { atMs: number; inferenceMs: number; cycleMs: number; detections: number }
 type ModelState = 'idle' | 'loading' | 'ready' | 'error';
 
 /**
@@ -200,6 +200,8 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
       if (!active || document.hidden || busyRef.current || !sourceRef.current) return;
       const source = sourceRef.current;
       busyRef.current = true;
+      // Medir captura → evaluación y publicación local, no sonido del navegador.
+      const cycleStartMs = performance.now();
       const generation = generationRef.current;
       try {
         const canvas = scratchRef.current ?? document.createElement('canvas');
@@ -220,6 +222,8 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
         const imageZone: ImageZone | null = activeZone ? { id: activeZone.id, cameraId, polygon: activeZone.polygon } : null;
         const filtered = activeRule ? result.detections.filter(d => d.confidence >= activeRule.minConfidence) : result.detections;
         const observed = trackerRef.current.step(cameraId, filtered, imageZone, now);
+        // Caja actual del track, en memoria, para no duplicar su incidencia al fragmentarse.
+        incidentsRef.current.observeTracks(cameraId, observed.tracks, now);
         if (activeRule) incidentsRef.current.ingest(observed.events, activeZone, activeRule, new Date().toISOString());
         const history = incidentsRef.current.snapshot();
         incidentCenter.ingest(history.incidents);
@@ -229,7 +233,10 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
         }
         setDetections(filtered); setTracks(observed.tracks);
         setLastAtMs(now);
-        setSamples(prev => [...prev, { atMs: now, inferenceMs: result.metrics.inferenceMs, detections: filtered.length }].slice(-120));
+        // Congelar duración antes del updater de React para evitar sesgo de render.
+        const cycleMs = performance.now() - cycleStartMs;
+        setSamples(prev => [...prev, { atMs: now, inferenceMs: result.metrics.inferenceMs,
+          cycleMs, detections: filtered.length }].slice(-120));
         setInferenceTotalMs(result.metrics.totalMs);
         setIncidents(history.incidents); setLog(history.log);
       } catch (error) {
@@ -267,7 +274,7 @@ export function useBrowserMediaMonitoring(cameraId: string, sourceType: BrowserS
     cameraId, sourceType, previewRef, sourceStatus, sourceError, fileName, openFile, openWebcam, disconnect,
     modelState, modelError, provider, setProvider, initializeModel, stopModel,
     threshold, setThreshold, intervalMs, setIntervalMs,
-    pageVisible, fps, avgInferenceMs, inferenceTotalMs,
+    pageVisible, foregroundSinceMs, fps, avgInferenceMs, inferenceTotalMs,
     zone, savePolygon, removePolygon, tracks: fresh ? tracks : [], detections: fresh ? detections : [],
     people: fresh ? tracks.filter(t => t.seen).length : 0, samples, incidents, log,
   };

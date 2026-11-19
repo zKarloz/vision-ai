@@ -102,6 +102,21 @@ export class ConfigValidationError extends Error {
 }
 
 export function validateConfig(data: unknown): ConfigSnapshot {
+  // Defensa en profundidad para entradas programáticas y datos recuperados de storage:
+  // se cortan arreglos desproporcionados ANTES de que Zod recorra todos sus elementos.
+  // El importador JSON de la UI ya limita el fichero a 256 KiB; esto protege también
+  // a las llamadas directas al caso de uso sin alterar el contrato de configuración.
+  if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
+    const candidate = data as Record<string, unknown>;
+    const limits = [
+      ['cameras', 100], ['zones', 250], ['rules', 500],
+    ] as const;
+    for (const [field, maxItems] of limits) {
+      if (Array.isArray(candidate[field]) && candidate[field].length > maxItems) {
+        throw new ConfigValidationError([`${field}: máximo de ${maxItems} registros permitido.`]);
+      }
+    }
+  }
   const result = configSchema.safeParse(data);
   if (!result.success) throw new ConfigValidationError(result.error.issues.map(issue =>
     `${issue.path.length ? issue.path.join('.') : 'configuración'}: ${issue.message}`));

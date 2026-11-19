@@ -9,6 +9,7 @@ import { StatusBadge } from '../../shared/components/StatusBadge';
 import { trackVisualState } from './trackVisualState';
 import { CAPTURE_INTERVAL_OPTIONS, captureIntervalLabel, isHighLoadCaptureInterval, parseCaptureIntervalMs } from './captureInterval';
 import { useBrowserMediaMonitoring } from './useBrowserMediaMonitoring';
+import { PerformanceDiagnostics } from './PerformanceDiagnostics';
 
 const control = 'rounded-xl border border-[var(--border)] bg-[var(--input)] px-3 py-2 text-sm text-[var(--text)]';
 const pretty = (value: number) => Number.isFinite(value) ? value.toFixed(1) : '—';
@@ -112,6 +113,11 @@ export function BrowserMediaMonitoring({ camera }: { camera: CameraRecord & { so
           <div className="rounded-xl bg-[var(--muted-bg)] p-3"><p className="text-xs text-[var(--muted)]">Capturas realizadas</p><p className="mt-2 text-lg font-bold">{monitor.samples.length}</p></div>
           <div className="rounded-xl bg-[var(--muted-bg)] p-3"><p className="text-xs text-[var(--muted)]">Último ciclo</p><p className="mt-2 text-lg font-bold">{monitor.inferenceTotalMs === null ? '—' : `${pretty(monitor.inferenceTotalMs)} ms`}</p></div>
         </div>
+        <PerformanceDiagnostics cameras={[{ cameraId: camera.id, samples: monitor.samples,
+          scanning: monitor.modelState === 'ready' && monitor.sourceStatus === 'online' }]}
+          provider={monitor.provider} source={camera.sourceType} mode="selected"
+          intervalMs={monitor.intervalMs} threshold={monitor.threshold}
+          foregroundSinceMs={monitor.foregroundSinceMs} visible={monitor.pageVisible}/>
         <p className="mt-4 text-xs leading-5 text-[var(--muted)]">Las capturas se detienen al ocultar la pestaña y se reanudan al volver. Una pérdida de señal no equivale a una salida de la zona.</p>
       </Panel>
 

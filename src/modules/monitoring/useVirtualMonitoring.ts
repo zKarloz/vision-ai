@@ -10,6 +10,7 @@ import type { Incident } from '../../core/domain/incident';
 import type { SafetyRule, Zone } from '../../core/domain/zone';
 import { VisualZoneMonitor, DEFAULT_TRACKING_OPTIONS, type VisionTrack } from '../../domain/visualTracking';
 import { SimulationWorld, type CameraId as WorldCameraId, type SimulationSnapshot } from '../../infrastructure/simulation/SimulationWorld';
+import type { CautionDemoEvent } from '../../infrastructure/simulation/PrecautionDemo';
 import { OnnxWorkerVisionEngine } from '../../infrastructure/vision/OnnxWorkerVisionEngine';
 import { CameraRoundRobin, freshObservedCount, type AnalysisMode } from './cameraScheduler';
 import { recentAnalysisFps } from './analysisPerformance';
@@ -17,7 +18,7 @@ import { DEFAULT_CAPTURE_INTERVAL_MS, type CaptureIntervalMs } from './captureIn
 
 export type CameraId = string;
 export type ModelState = 'idle' | 'loading' | 'ready' | 'error';
-export interface VisionSample { atMs: number; inferenceMs: number; count: number }
+export interface VisionSample { atMs: number; inferenceMs: number; cycleMs: number; count: number }
 export interface CameraAnalysis {
   detections: Detection[];
   tracks: VisionTrack[];
@@ -72,6 +73,8 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   const [analyses, setAnalyses] = useState<CameraAnalyses>(emptyAnalyses);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [log, setLog] = useState<IncidentLogEntry[]>([]);
+  // Únicamente en memoria de esta vista: los avisos DEMO no son auditoría real.
+  const [cautionDemoLog, setCautionDemoLog] = useState<CautionDemoEvent[]>([]);
 
   const zoom = zoomByCamera[cameraId] ?? 1;
   const selectedRecord = config.cameras.find(item => item.id === cameraId);
@@ -104,6 +107,9 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     try {
       world = new SimulationWorld(canvas, setSnapshot, () => {
         // Los eventos geométricos no se convierten en detecciones ni incidentes YOLO.
+      }, event => {
+        // Registro separado: JAMÁS invocar IncidentCenter.ingest para la DEMO.
+        if (mountedRef.current) setCautionDemoLog(previous => [event, ...previous].slice(0, 20));
       });
       worldRef.current = world;
       world.setVirtualCameras(config.cameras);
@@ -175,6 +181,10 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
         ...DEFAULT_TRACKING_OPTIONS,
         confirmFrames: rule?.minFrames ?? DEFAULT_TRACKING_OPTIONS.confirmFrames,
         exitFrames: rule?.exitFrames ?? DEFAULT_TRACKING_OPTIONS.exitFrames,
+        // CAM-02 pierde YOLO durante 4–6 muestras (75 ms cada una) según evidencia
+        // exportada. Retener el track 1,2 s evita nuevos IDs por oclusiones breves.
+        // La regla de entrada consecutiva y el cierre por salida no se relajan.
+        lossGraceMs: 1_200,
       });
     }
     incidentsRef.current.reset();
@@ -237,6 +247,8 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
       const target = schedulerRef.current.next(eligibleCameras, cameraId, mode);
       if (!target) return;
       inferenceBusyRef.current = true;
+      // Cronómetro monotónico de captura → reglas/publicación local, sin audio.
+      const cycleStartMs = performance.now();
       const generation = generationRef.current;
       try {
         const scratch = scratchRef.current ?? document.createElement('canvas');
@@ -262,6 +274,8 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
         const filtered = rule ? result.detections.filter(item => item.confidence >= rule.minConfidence) : result.detections;
         const tracker = trackersRef.current[target] ?? (trackersRef.current[target] = new VisualZoneMonitor());
         const evaluated = tracker.step(target, filtered, imageZone, observedAt);
+        // Mantener la última caja observada para detectar fragmentaciones rápidas del track.
+        incidentsRef.current.observeTracks(target, evaluated.tracks, observedAt);
         if (rule) incidentsRef.current.ingest(evaluated.events, selectedZone, rule, new Date().toISOString());
         const history = incidentsRef.current.snapshot();
         incidentCenter.ingest(history.incidents);
@@ -270,11 +284,14 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
           previewCanvasRef.current.getContext('2d')?.drawImage(scratch, 0, 0,
             previewCanvasRef.current.width, previewCanvasRef.current.height);
         }
+        // Se congela antes del setState: React puede ejecutar el updater más tarde.
+        const cycleMs = performance.now() - cycleStartMs;
         setAnalyses(previous => ({ ...previous, [target]: {
           detections: filtered,
           tracks: evaluated.tracks,
           samples: [...(previous[target]?.samples ?? []), {
-            atMs: observedAt, inferenceMs: result.metrics.inferenceMs, count: filtered.length,
+            atMs: observedAt, inferenceMs: result.metrics.inferenceMs,
+            cycleMs, count: filtered.length,
           }].slice(-120),
           inferenceTotalMs: result.metrics.totalMs,
           lastAtMs: observedAt,
@@ -360,14 +377,15 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
 
   return {
     sceneCanvasRef, previewCanvasRef, cameraId, setCameraId, snapshot, worldError,
-    mode, setMode, virtualCameraIds, cameraStats, totalDetections, pageVisible,
+    mode, setMode, virtualCameraIds, cameraStats, totalDetections, pageVisible, foregroundSinceMs,
     modelState, modelError, provider, setProvider, initializeModel, stopModel,
     threshold, setThreshold, intervalMs, setIntervalMs,
     zoom, setZoom, polygons, setZonePoints, zone,
     detections: showSelectedTracks ? visible.detections : [],
     tracks: showSelectedTracks ? visible.tracks : [], samples, analyses,
-    incidents, log, inferenceTotalMs: visible.inferenceTotalMs, fps, averageMs,
+    incidents, log, cautionDemoLog, inferenceTotalMs: visible.inferenceTotalMs, fps, averageMs,
     setRunning: (running: boolean) => worldRef.current?.setRunning(running),
+    setCautionDemoEnabled: (enabled: boolean) => worldRef.current?.setCautionDemoEnabled(enabled),
     resetWorld: () => { worldRef.current?.reset(); clearAnalysis('Escenario 3D reiniciado'); },
   };
 }

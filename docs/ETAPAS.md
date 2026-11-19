@@ -580,3 +580,172 @@ El PDF base define cuatro perfiles: **operador** (monitoreo), **supervisor** (re
 - **Permisos:** los cuatro roles pueden abrir `/configuracion` para editar **sus propias preferencias**. Solo el administrador sigue viendo y utilizando configuración de cámaras, importación JSON, versiones y auditoría local. La autorización de `/usuarios`, `/camaras` y `/zonas` no cambia.
 - **Despliegue:** parche exclusivamente de frontend; **sin migración SQL, Edge Function ni secretos nuevos**. Aplicar los archivos sobre la v1.9.6 con su hotfix de historial, ejecutar `npm run test && npm run typecheck && npm run build` y verificar edición de nombre en otra sesión, contraste de temas y RBAC.
 - **Límite:** el tema visual es una preferencia del navegador, no se sincroniza entre dispositivos. El nombre sí viaja con la cuenta de Supabase; no altera el actor/correo usado para auditar las decisiones remotas.
+
+## Mejora v1.9.6 — DEMO de precaución por conos (sin cambiar de etapa)
+
+- **Alcance:** botón «Iniciar DEMO conos» en Monitoreo 3D. Un tercer trabajador sintético se aproxima a los conos del sector ámbar, permanece allí y regresa al pasillo; el ciclo se repite mientras la demo esté activada y la escena siga corriendo.
+- **Regla DEMO:** distancia del trabajador al cono más próximo <= 1.55 unidades del mundo; confirmación de 500 ms y cierre tras 700 ms de retirada. Se muestra un aviso visual ámbar en la vista 3D y un registro **DEMO** de sesión, sin sirena.
+- **Separación de fuentes:** la proximidad se calcula mediante geometría de la escena, **no procede de YOLO**. El operario DEMO no se incluye en los fotogramas enviados al detector real; el evento DEMO no se entrega a `IncidentCenter` ni a Supabase, no se incluye como incidente oficial y no dispara informes automáticos. Los incidentes auténticos de personas en zonas restringidas mantienen el flujo vigente.
+- **Exportación:** la exportación JSON de sesión incorpora `cautionDemo` con los eventos explícitamente etiquetados como DEMO y separados de `incidents`/`eventLog` de YOLO.
+- **Pruebas:** `tests/precautionDemoStage7.test.ts` verifica proximidad, tiempos de confirmación/salida, reinicio/detención y no invasión geométrica de la zona roja. `npm run test && npm run typecheck && npm run build` debe validarse en el entorno del usuario.
+- **Pendiente para IA real:** detectar conos en píxeles con modelo entrenado y métricas sobre datos etiquetados (etapa 8); sólo entonces considerar eventos de cono como detecciones verificadas que se almacenen como incidentes reales de precaución.
+
+
+### Bloque A · Diagnóstico preliminar del historial multiusuario (18/11/2026)
+
+Se revisó el ZIP exportado `VISION-AI-CODIGO-20261118-235508.zip`, el PDF rector v2.0, el plan de continuidad y la definición de tablas compartida por el usuario. El paquete se identifica como `1.9.6-stage7-shared-history`. Este examen de código **no es aceptación E2E ni una inspección del estado actual del servidor**. Se confirmó en el código la lectura remota desde `SharedHistoryProvider`, el envío incremental desde `RemoteSyncProvider`, la reconciliación por usuario+instalación, las acciones humanas vía `vision_act_on_incident` y los triggers definidos en la migración del 18/11. Las políticas reales, su ejecución bajo cada JWT y la presencia de incidentes compartidos no han sido comprobadas en producción.
+
+**Estado A0:** revisión estática realizada; test/typecheck/build pendientes. En el entorno de revisión no fue posible instalar dependencias: `npm ci --offline` devolvió `ENOTCACHED` por falta del tarball de `zod`; la instalación de red agotó el tiempo permitido. No declarar pruebas verdes. Ejecutar en Git Bash en el proyecto local: `npm ci && npm run test && npm run typecheck && npm run build` y, si se dispone del modelo, `npm run audit:release`.
+
+**Diagnóstico SQL:** `supabase/diagnostics/20261118_verificar_historial_multiusuario.sql` fue ampliado únicamente con consultas de lectura para inventariar RPC, RLS, permisos SQL, triggers, conteos y anomalías de auditoría y reportes. Ejecutar cada bloque desde el SQL Editor del proyecto correcto y conservar los resultados redactados. SQL Editor puede usar permisos elevados: sus resultados **no certifican** que el Auditor no pueda escribir ni que el operador/supervisor tenga el comportamiento autorizado bajo su propio JWT.
+
+**A1 aún pendiente:** (1) generar incidente YOLO real desde administrador u operador; (2) cotejar mismo ID en supervisor y auditor; (3) reconocer desde supervisor y observar actualización/silencio en origen; (4) cerrar con nota y corroborar estado/autor/hora; (5) intentar doble reconocimiento y cierre concurrente; (6) denegaciones de auditor; (7) recargar, desconectar/reconectar y comprobar ausencia de regresión o duplicados. No usar evento DEMO de conos como evidencia. Registrar latencias entre clientes por separado de detección→sirena.
+
+**Riesgos a verificar antes de parchear:** el cliente consulta por sondeo de ~12 segundos, no por WebSocket; usa lotes paginados por desplazamiento y puede mostrar snapshots de distintas consultas con pequeñas diferencias temporales. La restricción frente a reintentos obsoletos y la autorización del RPC existen en el SQL **del repositorio**, pero requieren contraste con funciones/políticas desplegadas. El sensor es una fuente autenticada de metadatos, no una prueba criptográfica de que cada evento provino físicamente de una cámara. No modificar RLS ni datos hasta revisar los resultados A0 y A1.
+
+### Bloque A aceptado y transición a B/C (19/11/2026)
+
+**Evidencia comunicada por el usuario:** `npm ci`, Vitest **52/52 archivos y 284/284 pruebas**, `tsc --noEmit`, `tsc -b && vite build` y `npm run audit:release` superados en Git Bash/Windows. El diagnóstico PostgreSQL devolvió RPC presentes, RLS/políticas de lectura compartida, triggers activos, cuentas en los cuatro roles (2 administradores, 1 operador, 1 supervisor, 1 auditor), 225 acciones de incidentes, 65 informes individuales, 69 acciones de reportes y 0 auditorías con propietario incoherente, duplicados de reconocimiento/cierre humano o cierres con fecha sin informe. El usuario confirmó **satisfactorias** las pruebas de reconocimiento, cierre con nota, vista del auditor, recarga y persistencia multiusuario. El Bloque A se considera **aceptado funcionalmente según la evidencia reportada**, sin atribuir pruebas de concurrencia no documentadas ni auditorías independientes de identidad JWT.
+
+**Diferencia por verificar:** otra consulta indicó 67 incidentes `closed` y 21 `acknowledged`, frente a 65 informes por incidente. El contador «cierres sin reporte» excluye deliberadamente `closed_at IS NULL`. Ejecutar B.1 y B.2 antes de inferir corrupción o activar migraciones. No cerrar los 21 incidentes reconocidos sin revisión presencial.
+
+**Bloque B — parcial, con límite funcional conocido:** el trigger `vision_ai_incident_report` archiva automáticamente al cerrar un incidente YOLO un snapshot JSONB `incident:<id>` y la auditoría `vision_ai_report_created`; las claves y `ON CONFLICT DO NOTHING` protegen contra creación duplicada. Admin y auditor descargan PDF/CSV/JSON **bajo demanda**, generados por el navegador a partir del snapshot y de la auditoría remota. Este cierre NO crea un `vision_report_jobs` por incidente, NO guarda automáticamente un binario PDF/CSV/JSON y NO dispara un correo individual. El PDF rector v2.0 (pág. 12) describe un ReportJob, generación de archivos y despacho por evento: registrar esta desviación; **no añadir cola de incidentes ni migración/RLS sin la decisión explícita previa sobre el canal/destino**. La validación real del trigger se hará con B.1–B.5 y comprobación de un cierre reciente desde las vistas admin y auditor.
+
+**Bloque C — evidencia todavía pendiente:** el SQL del repositorio programa 05:05, 05:35 y 06:05 UTC; es imprescindible consultar `cron.job`, `cron.job_run_details`, `vision_report_jobs`, logs de `vision-daily-report` y Resend reales para certificar la ejecución por horario. El HTTP 200 manual previo no acredita Cron. `sent` con ID de Resend significa **aceptado por API**, no entrega real a Inbox. Las consultas de `supabase/diagnostics/20261119_verificar_reportes_automaticos.sql` son de solo lectura y no exponen comandos Cron ni destinos de correo.
+
+**Corrección de compatibilidad sin SQL:** `vision_generate_shared_daily_report(date)` crea un resumen JSONB sin agregados `critical`/`high`; la función de correo anterior suponía ambos presentes y podía representar indicadores vacíos si reutilizaba el mismo informe. Se movió la composición HTML y los conteos puros a `supabase/functions/_shared/dailySummary.ts` y se calcula a partir de `content.incidents` para respetar ambos formatos existentes. `tests/dailyReportEmailStage7.test.ts` cubre manual, Cron, cero incidencias y escape HTML. No cambia RLS, tablas, datos existentes ni disparos; **hay que redesplegar** `vision-daily-report` después de probar. Es una corrección de ejecución de la Edge Function, no una evidencia de envío real.
+
+**Seguridad de dependencias:** `npm audit` señaló 4 avisos (3 de desarrollo en Vitest/tinypool y 1 alta de ejecución en Zod); `npm audit --omit=dev` señaló Zod. No aplicar `npm audit fix --force` sin prueba de migración y compatibilidad, ni considerar el release plenamente limpio de seguridad. La actualización controlada de dependencias forma parte de la calidad posterior a los bloques de automatización.
+
+### Bloques B/C · Resultados reales de diagnóstico (19/11/2026)
+
+**Fuente:** resultados comunicados de ejecutar B.1–B.5 y C.1–C.7 en Supabase SQL Editor. Esta sección refleja el estado observado; no implica que se hayan ejecutado pruebas de permisos con un JWT de prueba ni una auditoría independiente de entrega de correo.
+
+| Control | Evidencia observada | Evaluación |
+|---|---|---|
+| B.1: cobertura de cierres | 70 incidentes cerrados, 0 sin fecha; 70 cumplen el disparador y 0 carecen de informe; 70 informes individuales | Correcto para la muestra actual. |
+| B.2: coherencia de snapshot | 0 informes huérfanos, 0 sin `content.incident`, 0 IDs discordantes, 0 snapshots no cerrados, 0 fechas discordantes | Correcto. |
+| B.3–B.4: auditoría e idempotencia | 74 informes totales, 0 sin auditoría de generación, 0 con auditoría de generación duplicada | Correcto. |
+| B.5: trabajo por incidente | 4 trabajos existentes: 4 diarios y 0 individuales | **Desviación del PDF v2.0, pág. 12**: el archivo y despacho por evento no están implementados. Requiere definir canal, destino, formatos y política de reintentos antes de modificar base de datos/RLS. |
+| C.1: agenda observada | 2 trabajos activos: `vision-ai-daily-report-lima` en `5,35 5 * * *` y `vision-ai-daily-report-lima-retry` en `5 6 * * *` | **3 disparos diarios**: 00:05, 00:35 y 01:05 Lima. El nombre «retry» corresponde solamente al tercero; el primero tiene dos disparos. |
+| C.2: ejecuciones | Trabajo principal: 6 ejecuciones exitosas; «retry»: 3 exitosas, desde el 17 al 19/11/2026 | Cron **sí ejecuta automáticamente** el SQL programado. «succeeded» no demuestra por sí solo HTTP 200/entrega, pero existe evidencia complementaria. |
+| C.3–C.4: envíos | 4 trabajos en `sent`, 4 intentos totales, 4 IDs de Resend, 4 aceptaciones por proveedor, 0 errores registrados | Aceptación por API demostrada; recepción del correo en bandeja **no confirmada**. El trabajo del 15/11 fue creado el 16/11 a las 21:18 UTC; no atribuirlo automáticamente a Cron. |
+| C.5–C.7: totales e integridad | 4 informes diarios, 70 individuales; 0 días con trabajo duplicado; 0 `sent` sin ID/aceptación | Correcto para los datos disponibles. |
+
+**Decisión de avance:** B queda **aprobado en generación/archivo compartido**, pero **abierto en orquestación y despacho por incidente**. C queda **aprobado en programación y aceptación de Resend**, pendiente de comprobar entrega real al destinatario y escenarios de fallo/reintento. No cambiar programaciones ni crear trabajos de incidente sin una decisión explícita; los triggers/RLS/datos de producción no se modificaron por este seguimiento.
+
+**Próxima verificación breve:** comprobar en Resend el estado `delivered` de un ID no sensible y la presencia del correo del 18/11 en la bandeja; confirmar que la versión corregida de `vision-daily-report` fue desplegada y que `npm run test`, `typecheck`, `build` siguen pasando tras el incremento B/C. Después atender con prioridad la vulnerabilidad **alta** de `zod` señalada por `npm audit --omit=dev` mediante una actualización controlada y lockfile coherente; no ejecutar `npm audit fix --force`.
+
+
+## Bloque D · Calidad y seguridad — D1 dependencias y validación de cargas (19/11/2026)
+
+**Línea base aportada por el desarrollador:** `npm run test` completó **288/288 pruebas**, `npm run typecheck`, `npm run build` y `npm run audit:release` finalizaron correctamente. La advertencia de paquetes de Vite > 500 kB no impide compilar, pero debe medirse al cerrar rendimiento. La versión corregida de la Edge Function `vision-daily-report` fue desplegada en producción y el administrador confirmó recepción real del correo diario, además de las ejecuciones pg_cron y aceptación registrada en Resend. Se considera **validado el Bloque C para programación y entrega diaria**, con las limitaciones de escenarios de reintento que aún deberán cubrirse. No equivale a despacho automático de cada informe individual por cierre (desviación documentada del PDF v2.0).
+
+**Hallazgo de seguridad:** el `npm audit` previo identificó Zod 3.25.76 (alta, en dependencias de ejecución), Vitest 3.2.7 / @vitest/mocker (moderada) y tinypool 1.1.1 (crítica, dependencia de desarrollo). La corrección conocida de Zod requiere versión >= 4.6.6, lo que implica un cambio mayor. `npm audit --omit=dev` mostró la vulnerabilidad de Zod en producción. No ejecutar `npm audit fix --force` sin revisar y probar los cambios.
+
+**Incremento D1 entregado:**
+
+- `scripts/upgrade-security-stage7.mjs`: asistente local para Git Bash que actualiza Zod a >= 4.6.7 y Vitest a >= 5.1.1, resuelve **el lockfile real con npm** y comprueba las versiones resueltas de `tinypool` (>= 2.1.2) y `@vitest/mocker` (>= 4.1.12). No toca Supabase, despliegues ni datos. Si la instalación falla, restaura los dos manifiestos previos. Requiere acceso a npm desde Windows.
+- `src/application/config/configSchema.ts`: rechazo anticipado de cargas con más de 100 cámaras, 250 zonas o 500 reglas antes de recorrer sus elementos con Zod, como defensa adicional para llamadas programáticas (la UI ya limita JSON a 256 KiB). Se preservan las reglas de negocio y la validación atómica.
+- `tests/configSecurityStage7.test.ts`: cuatro pruebas nuevas de rechazo de colecciones sobredimensionadas y de compatibilidad con entradas válidas/referencias cruzadas.
+
+**Cómo validar en Windows** (desde la raíz, sin secretos):
+
+```bash
+node scripts/upgrade-security-stage7.mjs --plan
+node scripts/upgrade-security-stage7.mjs
+npm run test && npm run typecheck && npm run build && npm run audit:release
+npm audit
+npm audit --omit=dev
+```
+
+Revisar el diff de `package.json` y `package-lock.json` creados por npm y subir ambos juntos. Si Vitest o Zod 4 presenta incompatibilidades, **no desplegar**: registrar la salida y hacer una corrección puntual. No se declara remediación ni aprobación de las pruebas del incremento D1 hasta recibir esos resultados. El entorno donde se preparó el ZIP no pudo acceder a `registry.npmjs.org`; por ello, no se fabricó ni se distribuyó un `package-lock.json` inconsistente.
+
+**Pendiente D2/D3:** medir FPS y detección→alarma en Windows (objetivos 5–15 FPS/cámara y < 1.5 s), comprobar importación válida/inválida/duplicada con Zod 4, foco y Escape, contraste, teclado, zoom 200 %, responsive 375/768/1280 px y E2E con roles. No se han alterado ONNX, dominio, historial compartido, RLS ni migraciones en D1.
+
+### Bloque D1 · Corrección de la verificación de dependencias (19/11/2026)
+
+Tras la actualización, el administrador confirmó **Vitest 5.1.1, 292/292 pruebas, typecheck, build y auditoría de release correctos**, además de `npm audit` y `npm audit --omit=dev` con **0 vulnerabilidades**. El primer script terminó con un falso error: exigía `tinypool` aun cuando ya no aparecía instalado en el lockfile actualizado. Este error ocurría **después** de ejecutar correctamente `npm install`, por lo que no implica una instalación fallida.
+
+Se corrigió `scripts/upgrade-security-stage7.mjs`: `zod` y `vitest` son dependencias obligatorias; `tinypool` y `@vitest/mocker` se comprueban **solo si están presentes**, incluidas copias transitivas anidadas. Se añadió `--verify` para revisar `package.json` y `package-lock.json` **sin** reinstalar ni modificar archivos. La verificación del script es complementaria a `npm audit`; no sustituye su análisis. Conservar juntos el `package.json` y `package-lock.json` generados localmente y versionarlos en Git; el ZIP de este hotfix no los reemplaza.
+
+Advertencias de Rollup relativas a comentarios `@__PURE__` de Zod y a fragmentos JS mayores a 500 KiB: **no impiden build**; el segundo aviso se tratará en el análisis de rendimiento del Bloque D2. No hubo modificaciones del esquema PostgreSQL, políticas RLS, funciones desplegadas ni arquitectura principal.
+
+### Bloque D · D1 aprobado y D2 instrumentación de rendimiento (19/11/2026)
+
+**D1 verificado en Windows (evidencia del desarrollador):** Zod `4.6.7`, Vitest `5.1.1`, `@vitest/mocker` `5.1.1`, `tinypool` no instalado. Pasaron **292/292 pruebas**, typecheck, build y `audit:release`; `npm audit` y `npm audit --omit=dev` devolvieron **0 vulnerabilidades**. El primer verificador exigía equivocadamente que `tinypool` estuviera instalado; el hotfix corrigió esa condición y `--verify` fue satisfactorio. Conservar juntos los `package.json` y `package-lock.json` regenerados en Windows; el ZIP D2 no los reemplaza. Las advertencias de Vite (>500 kB) y Rollup no son errores, pero el tamaño sigue pendiente de optimización.
+
+**D2 — Incremento de medición (no de optimización):**
+
+- Se añade una instrumentación de ciclo monotónica por captura en `useVirtualMonitoring` y `useBrowserMediaMonitoring`, desde el inicio de adquisición hasta la publicación sincrónica del estado local de incidentes (`cycleMs`). El dato `inferenceMs` procede del Worker ONNX. Se preservan confirmación temporal, reglas, historial, alarma, planificador y el único Worker.
+- Componente reutilizado `PerformanceDiagnostics` en Monitoreo 3D y cámara externa: FPS **por cámara**, P95 de inferencia, P95 de ciclo y conteo de capturas. Usa ventana de hasta **12 segundos continuos**, mínimo **5 muestras y 2 segundos**; ignora datos previos al retorno de pestaña o separados por interrupciones extensas. Las muestras de cámaras sin análisis se marcan en pausa.
+- «Exportar métricas JSON» descarga exclusivamente parámetros, estadísticas y tiempos numéricos relativos del segmento medido. No incluye fotogramas, vídeo, incidentes, auditoría de personas, tokens ni datos de identidad. Es evidencia local, no informe oficial y no se envía a Supabase.
+- Pruebas unitarias `performanceEvidenceStage7.test.ts` comprueban FPS por cámara, percentiles, pausas, reanudación, ventana temporal y estados sin medición. **Pendiente de aprobación en Windows**: instalar el incremento y ejecutar tests/typecheck/build/auditoría; todavía no se han observado FPS del equipo actual en este incremento.
+
+**Protocolo de aceptación reproducible para D2 (Windows, Chrome/Edge, equipo real):**
+
+1. Con la pestaña visible, abrir Monitoreo, seleccionar cámara 3D fija y activar sonido. Activar YOLO con **WebGPU y 75 ms**, usando **Solo seleccionada**. Mantener la escena constante durante al menos **30 segundos**, sin cambiar pestaña ni redimensionar; exportar métricas antes de detener el modelo. Registrar cantidad de cámaras, GPU, navegador y condiciones generales **fuera del JSON** si se desea comparar equipos.
+2. Repetir en **Todas las 3D** y exportar un segundo JSON. El muestreo es compartido por un solo Worker y el FPS de cada cámara puede ser menor; no sumar FPS de diferentes cámaras y presentarlo como resultado de una sola.
+3. Si existen fuentes webcam o MP4/WebM, repetir en una sola fuente, manteniendo igual resolución, intervalo y configuración. No compartir el archivo de video ni capturas de rostros.
+4. Revisar los FPS y P95 obtenidos frente al objetivo del PDF **5–15 FPS por cámara**. El ciclo captura→publicación **NO equivale** a latencia detección→sirena. Esta última debe medirse aparte con un ensayo real que incluya confirmación temporal, actualización UI y audio habilitado; objetivo **<1,5 s**. No atribuir automáticamente su medición al Worker, al ciclo ni a la sincronización entre usuarios.
+5. Si hay caídas de FPS o bloqueos, documentarlas primero; **no** reducir `confirmFrames`, desactivar alarmas, cambiar RLS, introducir inferencias concurrentes ni modificar el intervalo predeterminado sin repetir el ensayo.
+
+**Estado D2:** instrumentos y protocolo entregados; **rendimiento real todavía pendiente de medición** y latencia detección→alarma sin evidencia física. El PDF v2.0 pág. 11 permanece criterio de aceptación, no certificado de resultado. Las pruebas de accesibilidad, zoom 200 %, responsive, roles E2E y tamaño de bundles pasan a D3.
+
+
+### D2 · Hotfix de incidentes repetidos por fragmentación del seguimiento (19/11/2026)
+
+**Incidencia informada por el usuario:** al activar la cámara con zona restringida aparecieron rápidamente cuatro incidentes. El último incremento D2 superó **301/301 pruebas, typecheck, build y audit:release** en Windows; ello no descarta un defecto de lógica en condiciones reales. En el código anterior se identificó un mecanismo reproducible: `VisualZoneMonitor` puede perder un track tras detecciones omitidas, registrar `lost`, y confirmar poco después un `opened` con otro `trackId`; el `VisualIncidentCoordinator` trataba cada ID nuevo como una intrusión independiente incluso cuando el anterior seguía abierto para revisión. **Es una causa plausible, no un diagnóstico confirmado de los cuatro casos concretos sin registrar sus cámaras/tracks.**
+
+**Corrección conservadora, solo frontend:** los eventos YOLO llevan opcionalmente la caja normalizada observada (`VisionEvent.box`); el coordinador mantiene en memoria la última caja del track original. Tras `lost`, una reapertura en la misma cámara, zona y regla, dentro de 10 segundos, con candidato único y cajas suficientemente coincidentes (distancia de centro ≤ 0,075 e IoU ≥ 0,50), se asocia **provisionalmente** al incidente original sin generar otro ID. Pérdidas consecutivas de tracks provisionales pueden vincularse en cadena si reúnen las mismas condiciones. No se fusionan personas con tracks simultáneos, cámaras diferentes, cajas distintas, coincidencias tardías ni eventos sin geometría. Tras salida de un track provisional, una intrusión posterior no se fusiona.
+
+**Regla de seguridad preservada:** el incidente asociado conserva `requiresReview`; la salida del nuevo track no cierra el original y la revisión humana sigue siendo obligatoria. No se borra ni reescribe historial preexistente. La geometría auxiliar solo vive en memoria; no se añade a Supabase, localStorage, RLS ni reportes oficiales. No se cambian `minFrames`, `cooldownSec`, los controles de alarma o la inferencia ONNX.
+
+**Verificación:** se agregó `tests/incidentTrackFragmentationStage7.test.ts` con 9 pruebas para fragmentación sucesiva, excepción de personas distintas, nuevas entradas tras salida, cámara distinta, cierre correcto y conservación de revisión. El núcleo modificado compiló con TypeScript global en aislamiento y pasó 7 escenarios deterministas Node en el entorno de preparación. **Pendiente:** suite integral esperada 310 pruebas, typecheck, build, audit:release y ensayo real de 30–60 s con «Solo seleccionada». Registrar fecha/hora, cámara, zona y número de tracks si el fenómeno persiste, **sin compartir tokens ni información personal**. No declarar la incidencia cerrada hasta observar la prueba de la cámara real.
+
+**D2 rendimiento:** después de estabilizar la creación de incidentes, repetir exportación de métricas para cámara seleccionada y modo multicámara. La protección de fragmentación no certifica por sí misma FPS ni latencia audible.
+
+## Bloque D2 — Corrección de seguimiento intermitente CAM-02 (19/11/2026)
+
+- Evidencia recibida: exportación de CAM-02 en modo «Solo seleccionada», WebGPU, captura 75 ms, umbral 0,25, zoom 1,5. En 120 capturas hubo 77 con 1 detección y 43 sin detección; ninguna tenía 2 detecciones. Se registraron tres aperturas locales con tracks 1/2/3 y pérdidas posteriores; se observó track 6 al exportar. **Las cajas históricas no están en el JSON**: el patrón demuestra fragmentación, pero no identidad física.
+- Causa técnica detectada: `VisualZoneMonitor` expira un track a los 4 fotogramas ausentes; en la exportación hay pausas de hasta 6 muestras (~0,45 s), suficientes para fragmentar un seguimiento de la misma escena. El cambio **no** aumenta confianza del detector ni deduce identidad.
+- Corrección focalizada: opción `TrackingOptions.lossGraceMs` (predeterminada 0 para no alterar otros adaptadores); las cámaras virtuales 3D usan 1.200 ms. La reapertura tras un intervalo superior a la gracia no reutiliza el track anterior; no se generan cierres por fotogramas ausentes.
+- Se añade regresión con la secuencia de 120 conteos de la exportación, sin imágenes ni datos personales. La prueba recrea una caja sintética estable; no equivale a reproducir cajas YOLO originales.
+- Pendiente en Windows: `npm run test && npm run typecheck && npm run build`, prueba real de CAM-02 con el mismo trabajador, y posteriormente CAM-01/multicámara y dos personas. **No desplegar a producción sin estas pruebas.**
+- Sin migraciones, cambios RLS o escrituras en Supabase. Los incidentes existentes no se alteran.
+
+
+### D2 · Hotfix de caducidad por salto temporal (19/11/2026)
+
+**Motivo:** después del incremento de tolerancia de 1,2 s, el desarrollador ejecutó Vitest: 317/318 pruebas aprobaron. Falló exclusivamente `visualTrackingIntermittencyStage7.test.ts` en «no reutiliza un track para una aparición lejana tras una pausa larga»: tras pasar de t=150 ms a t=3.000 ms, no se emitía `lost`. La ejecución encadenada no llegó a `typecheck`, `build` ni `audit:release`.
+
+**Causa y solución:** la asociación comprobaba el tiempo transcurrido solo cuando `missed > 0`. Un salto de reloj podía conservar `missed=0` y asociar indebidamente la nueva detección. Además, el descarte exigía `maxMisses`, por lo que una única captura tras un lapso largo no retiraba el track. El rastreador ahora impide la asociación después de la gracia, incluso cuando todavía no hay capturas ausentes, y emite un único `lost` al caducar. La política clásica por `maxMisses` permanece para fuentes sin gracia temporal. No se confirma salida ni se cierra el incidente: pasa a revisión.
+
+**Alcance:** exclusivamente `src/domain/visualTracking.ts` y documentación consolidada. La prueba de regresión que detectó el defecto ya estaba incluida en el ZIP anterior; se conserva sin debilitar sus expectativas. Sin cambios a RLS, migraciones, fuentes reales, reglas de autorización ni datos de Supabase. **Pendiente:** `npm run test && npm run typecheck && npm run build && npm run audit:release` y prueba real con CAM-02 en «Solo seleccionada»; no desplegar si falla cualquiera de ellas.
+
+## Bloque E · Etapa 8 — E1: evaluación cuantitativa offline (19/11/2026)
+
+**Evidencia de entrada:** el usuario confirmó que CAM-02 («Solo seleccionada») dejó de multiplicar incidentes después del hotfix de seguimiento intermitente/caducidad y que las verificaciones locales fueron satisfactorias. No se adjuntó un registro nuevo del comando de 318 pruebas, por lo que el resultado se conserva como confirmación funcional del usuario, no como salida de CI reproducida aquí. El JSON anterior de CAM-02 midió **13,32 FPS** y **26,36 ms** de inferencia media con WebGPU y 75 ms (120 muestras); esto mide una sesión, no FPS general garantizado ni latencia de alarma audible.
+
+**Requisitos del PDF rector:** etapa 8 (página 17) plantea detector validado con métricas de datos etiquetados, API Python, WebSocket y PostgreSQL. La arquitectura ya tiene un detector de personas YOLOv8n ONNX ejecutado en un Web Worker y PostgreSQL/Supabase para histórico; NO tiene detección real de conos/cascos/chalecos ni un dataset etiquetado independiente. La preparación de la evaluación offline NO significa que la etapa 8 esté completada.
+
+**Incremento E1 (no disruptivo):**
+
+- `scripts/evaluate-vision-stage8.mjs`: CLI Node sin dependencias ni conexión a Supabase; evalúa anotaciones humanas (`truth`) y predicciones (`predictions`) por cámara/fotograma y clase (`persona`, `cono`, `casco`, `chaleco`), con cajas normalizadas [0,1]. Utiliza coincidencia 1:1 por clase y IoU configurable; devuelve TP, FP, FN, precisión, recall y F1 global y por clase. No calcula mAP, calibración, latencia audible ni precisión sobre imágenes sin etiquetar.
+- `examples/vision-stage8-ejemplo.json`: dos fotogramas **sintéticos** para mostrar el formato. Su resultado no puede presentarse como métrica del detector real; solo prueba el cálculo.
+- `tests/stage8ValidationStage8.test.ts`: 11 regresiones para umbrales, clases distintas, duplicaciones, falsos positivos/negativos, cajas inválidas, aislamiento de cámara y ejecución del CLI. No sustituye la validación sobre un dataset de verdad terreno (ground truth).
+- Límites de lectura: archivo local JSON de hasta 5 MiB, máximo 5.000 fotogramas y 50 cajas por grupo/fotograma; rechaza cajas corruptas y fotogramas repetidos. Las entradas/salidas contienen **solo cajas y etiquetas**, nunca imágenes, clips ni datos personales.
+
+**Uso en Git Bash:**
+
+```bash
+node scripts/evaluate-vision-stage8.mjs --input examples/vision-stage8-ejemplo.json
+node scripts/evaluate-vision-stage8.mjs --input ruta/dataset-etiquetado.json --confidence 0.25 --iou 0.5 --output ruta/resultado-e1.json
+npm run test && npm run typecheck && npm run build && npm run audit:release
+```
+
+`--output` NO sobrescribe archivos existentes; usa un nombre nuevo para cada corrida. Si se mantiene el conjunto previo de 318 pruebas, el resultado esperado es **329**, a verificar en Windows. La consola/compilación del proyecto completo no se verificó en este entorno. Antes de publicar cifras, preparar datos etiquetados de escenas independientes y documentar condiciones (número de fotogramas, cámaras, iluminación, oclusión, umbral, versión del modelo y dataset). Comparar cada clase individualmente: la clase `cono` no existe en la salida actual `decodePeople` del YOLO COCO y debe evaluarse con un modelo entrenado para ella, no con una suposición geométrica del escenario DEMO.
+
+**Decisión arquitectónica propuesta, pendiente de justificación técnica y aprobación antes de implementarse:** NO agregar todavía API Python ni servicio WebSocket. El Worker ONNX actual funciona en el navegador; un servicio Python implicaría nuevos recursos, despliegue y tratamiento de datos, y WebSocket sería una mejora de comunicación distinta de la precisión del modelo. Primero medir precisión real y rendimiento por cámara, contrastar límites gratuitos, y decidir si la necesidad (conos/EPP, inferencia independiente del navegador o transmisión inmediata entre clientes) compensa el cambio. No se han modificado migraciones, RLS, datos de producción, motor YOLO, flujo de incidentes ni cron.
+
+**Siguientes hitos E2/E3:** construir corpus **real etiquetado y autorizado** para `persona`, `cono`, `casco`, `chaleco`; elegir/entrenar o adaptar un detector compatible con el contrato `VisionEngine`; ejecutar evaluación y pruebas de precisión/recall bajo distintos escenarios antes de activar alertas oficiales de cono o EPP. Mantener la DEMO geométrica aislada de la detección real. Después comparar ONNX Web Worker vs Python/WebSocket según evidencia y costo real.

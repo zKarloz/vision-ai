@@ -5,13 +5,10 @@
  * El ID que devuelve Resend acredita aceptación por API, no entrega a bandeja.
  */
 import { withSupabase } from 'npm:@supabase/server@1';
+import { htmlReport, countDailySeverities, type DailySnapshot, type SummaryIncident } from '../_shared/dailySummary.ts';
 
 const env = (key: string) => Deno.env.get(key)?.trim() ?? '';
 const reply = (payload: unknown, status = 200) => Response.json(payload, { status });
-function escapeHtml(value: unknown): string {
-  return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
-}
 function previousDayInLima(now: Date): string {
   // Lima = UTC−05 durante todo el año. Cron se ejecuta a las 05:05 UTC.
   const local = new Date(now.getTime() - 5 * 3_600_000);
@@ -21,26 +18,6 @@ function previousDayInLima(now: Date): string {
 function limaRange(day: string) {
   const start = new Date(`${day}T05:00:00.000Z`);
   return { start: start.toISOString(), end: new Date(start.getTime() + 86_400_000).toISOString() };
-}
-interface SummaryIncident {
-  id: string; camera_id: string; track_id: string; zone_id: string; rule_id: string;
-  severity: string; status: string; confidence: number; opened_at: string;
-  acknowledged_at: string | null; closed_at: string | null; duration_sec: number | null;
-}
-interface DailySnapshot {
-  day: string; timezone: string; start: string; end: string;
-  total: number; critical: number; high: number; incidents: SummaryIncident[];
-}
-function htmlReport(content: DailySnapshot): string {
-  const rows = content.incidents.map(i => `<tr><td>${escapeHtml(i.id)}</td><td>${escapeHtml(i.camera_id)}</td>` +
-    `<td>${escapeHtml(i.zone_id)}</td><td>${escapeHtml(i.severity)}</td><td>${escapeHtml(i.status)}</td>` +
-    `<td>${escapeHtml(i.duration_sec ?? '—')}</td></tr>`).join('');
-  return `<h1>VISION AI · Resumen diario ${escapeHtml(content.day)}</h1>` +
-    `<p>${content.total} incidentes detectados por YOLO · Críticos: ${content.critical} · Altos: ${content.high}</p>` +
-    `<p>Periodo: ${escapeHtml(content.start)} — ${escapeHtml(content.end)} (Lima)</p>` +
-    '<table border="1" cellspacing="0" cellpadding="6"><thead><tr><th>ID</th><th>Cámara</th>' +
-    '<th>Zona</th><th>Severidad</th><th>Estado</th><th>Duración (s)</th></tr></thead>' +
-    `<tbody>${rows}</tbody></table><p>Solo metadatos, sin fotografías ni clips.</p>`;
 }
 
 export default {
@@ -78,9 +55,9 @@ export default {
         if (eventsError) throw new Error(`No se pudieron consultar incidentes: ${eventsError.message}`);
         const incidents = (data ?? []) as SummaryIncident[];
         if (incidents.length >= 10000) throw new Error('Más de 9999 incidentes diarios; requiere paginación.');
+        const counts = countDailySeverities(incidents);
         const snapshot: DailySnapshot = { day, timezone: 'America/Lima', start, end,
-          total: incidents.length, critical: incidents.filter(i => i.severity === 'critical').length,
-          high: incidents.filter(i => i.severity === 'high').length, incidents };
+          total: incidents.length, ...counts, incidents };
         const { error: archiveError } = await ctx.supabaseAdmin.from('vision_reports').upsert({
           key: `daily:${day}`, type: 'daily', period_start: start, period_end: end, content: snapshot,
         }, { onConflict: 'key', ignoreDuplicates: true });
