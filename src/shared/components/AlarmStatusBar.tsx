@@ -102,7 +102,8 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
     } finally { setSaving(false); }
   }
 
-  const soundButton = <Button size="sm" onClick={() => {
+  const soundButton = <Button size="sm" className={isFloating ? 'min-w-0 w-full sm:w-auto' : undefined}
+    style={isFloating ? { whiteSpace: 'normal' } : undefined} onClick={() => {
     if (soundEnabled) disableSound(); else void enableSound();
   }}>
     {soundEnabled ? <VolumeX size={15}/> : <Volume2 size={15}/>}
@@ -111,26 +112,27 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
 
   return <>
     {isFloating ? (
-      <div className="pointer-events-none fixed right-4 top-[82px] z-[15] w-[min(360px,calc(100vw-2rem))] sm:right-6">
+      <div className="pointer-events-none fixed inset-x-2 top-[calc(74px_+_env(safe-area-inset-top))] z-[25] min-w-0 max-w-full sm:inset-x-auto sm:right-6 sm:top-[82px] sm:w-[360px]">
         <div role="status" aria-label="Alarma de monitoreo" aria-live="polite"
           aria-hidden={motion === 'exiting'}
           onAnimationEnd={event => { if (event.target === event.currentTarget) finishMotion(); }}
-          className={`rounded-2xl border border-[var(--danger)] bg-[var(--card)] p-4 text-[var(--text)] shadow-2xl ${motion === 'entering' ? 'alarm-float-enter pointer-events-auto' : motion === 'exiting' ? 'alarm-float-exit pointer-events-none' : 'pointer-events-auto'}`}>
+          className={`max-h-[min(65dvh,440px)] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl border border-[var(--danger)] bg-[var(--card)] p-3 text-[var(--text)] shadow-2xl sm:p-4 ${motion === 'entering' ? 'alarm-float-enter pointer-events-auto' : motion === 'exiting' ? 'alarm-float-exit pointer-events-none' : 'pointer-events-auto'}`}>
 
-          <div className="flex items-start gap-3">
-            <span className="rounded-xl bg-[var(--danger-bg)] p-2 text-[var(--danger)]"><BellRing size={19} aria-hidden="true"/></span>
+          <div className="flex min-w-0 items-start gap-2 sm:gap-3">
+            <span className="shrink-0 rounded-xl bg-[var(--danger-bg)] p-2 text-[var(--danger)]"><BellRing size={19} aria-hidden="true"/></span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold">{displayCount === 1 ? '1 alarma pendiente' : `${displayCount} alarmas pendientes`}</p>
-              <p className="mt-1 text-xs text-[var(--muted)]">Requiere reconocimiento · {soundEnabled ? 'Audio activo' : 'Audio desactivado'}</p>
+              <p className="mt-1 break-words text-xs text-[var(--muted)]">Requiere reconocimiento · {soundEnabled ? 'Audio activo' : 'Audio desactivado'}</p>
               {displayPending.length === 1 && <p className="mt-1 truncate text-[11px] text-[var(--muted)]" title={`${displayPending[0].cameraId} · ${displayPending[0].zoneId}`}>{displayPending[0].cameraId} · {displayPending[0].zoneId}</p>}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {mayAcknowledge && <Button size="sm" variant="primary" onClick={() => {
+          {/* En móviles las acciones ocupan una cuadrícula, no ensanchan el viewport. */}
+          <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            {mayAcknowledge && <Button size="sm" className="min-w-0 w-full sm:w-auto" style={{ whiteSpace: 'normal' }} variant="primary" onClick={() => {
               setSelectedId(pending[0]?.id ?? ''); setDialogOpen(true); setFormError('');
             }}>Reconocer</Button>}
             {soundButton}
-            <Link to="/incidentes" className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-[var(--border)] px-3 text-xs font-semibold hover:bg-[var(--muted-bg)]"><ShieldAlert size={14}/> Ver incidentes</Link>
+            <Link to="/incidentes" className="col-span-2 inline-flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-xl border border-[var(--border)] px-3 py-2 text-center text-xs font-semibold hover:bg-[var(--muted-bg)] sm:col-span-1"><ShieldAlert size={14} className="shrink-0"/> Ver incidentes</Link>
           </div>
           {soundError && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{soundError}</p>}
           {!state.storageOk && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">El historial no se pudo guardar en este navegador.</p>}

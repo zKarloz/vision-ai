@@ -4,6 +4,7 @@ import { validateImagePolygon, type ImagePoint, type ImageZone } from '../../cor
 import { cameraMonitoringPolicy } from '../../core/domain/cameraMonitoringPolicy';
 import { polygonsFromConfig } from '../../application/config/cameraPolygons';
 import { useCameraRegistry } from '../../app/providers/CameraRegistryProvider';
+import { useAccountStorage } from '../../app/providers/AccountStorageProvider';
 import { useIncidentCenter } from '../../app/providers/IncidentCenterProvider';
 import { VisualIncidentCoordinator, type IncidentLogEntry } from '../../application/incidents/VisualIncidentCoordinator';
 import type { Incident } from '../../core/domain/incident';
@@ -17,6 +18,7 @@ import type { SafetyConeDetection } from '../../vision/conePostprocess';
 import { CameraRoundRobin, freshObservedCount, type AnalysisMode } from './cameraScheduler';
 import { recentAnalysisFps } from './analysisPerformance';
 import { DEFAULT_CAPTURE_INTERVAL_MS, type CaptureIntervalMs } from './captureInterval';
+import { CAPTURE_ZOOM_STORAGE_KEY, isCaptureZoom, loadCaptureZooms, reprojectCapturePolygon } from './captureZoom';
 
 export type CameraId = string;
 export type ModelState = 'idle' | 'loading' | 'ready' | 'error';
@@ -49,6 +51,7 @@ function emptyAnalyses(cameraIds: readonly string[] = []): CameraAnalyses {
  */
 export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') {
   const { config, setImagePolygon } = useCameraRegistry();
+  const storage = useAccountStorage();
   const { center: incidentCenter } = useIncidentCenter();
   const polygons = polygonsFromConfig(config.zones);
   const sceneCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -84,7 +87,8 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   // Chrome limita timers y requestAnimationFrame en pestañas ocultas.
   const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || !document.hidden);
   const [foregroundSinceMs, setForegroundSinceMs] = useState(() => performance.now());
-  const [zoomByCamera, setZoomByCamera] = useState<Record<CameraId, number>>({ 'CAM-01': 1, 'CAM-02': 1.5 });
+  // Zoom aislado por cuenta: al recargar no debe desalinearse una zona ya recalibrada.
+  const [zoomByCamera, setZoomByCamera] = useState<Record<CameraId, number>>(() => loadCaptureZooms(storage));
   const [analyses, setAnalyses] = useState<CameraAnalyses>(emptyAnalyses);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [log, setLog] = useState<IncidentLogEntry[]>([]);
@@ -458,8 +462,37 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     catch (error) { return error instanceof Error ? error.message : 'No se pudo guardar la zona.'; }
   }
 
-  function setZoom(value: number): void {
-    setZoomByCamera(previous => ({ ...previous, [cameraId]: value }));
+  /**
+   * Actualiza la ampliación y, si existe una zona, publica su reproyección en
+   * una nueva versión LOCAL. Primero se valida todo; no se toca Supabase.
+   * Los cambios de firma reinician el seguimiento para evitar cajas obsoletas.
+   */
+  function setZoom(value: number): string | null {
+    if (!isCaptureZoom(value)) return 'Zoom de captura no permitido.';
+    if (value === zoom) return null;
+    const adjusted = zone ? reprojectCapturePolygon(zone.polygon, zoom, value) : null;
+    if (adjusted?.error) return adjusted.error;
+
+    const next = { ...zoomByCamera, [cameraId]: value };
+    let oldPreference: string | null = null;
+    try {
+      oldPreference = storage.getItem(CAPTURE_ZOOM_STORAGE_KEY);
+      // Guardar el zoom antes del polígono evita publicar una zona con un
+      // encuadre que no pueda conservarse después de recargar la página.
+      storage.setItem(CAPTURE_ZOOM_STORAGE_KEY, JSON.stringify(next));
+      if (adjusted?.points) {
+        try { setImagePolygon(cameraId, adjusted.points); }
+        catch (error) {
+          // La versión de configuración falló: devolver el zoom persistido.
+          storage.setItem(CAPTURE_ZOOM_STORAGE_KEY, oldPreference ?? JSON.stringify(zoomByCamera));
+          throw error;
+        }
+      }
+      setZoomByCamera(next);
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : 'No fue posible guardar el zoom de captura.';
+    }
   }
 
   const visible = analyses[cameraId] ?? emptyAnalysis();

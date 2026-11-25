@@ -303,3 +303,9 @@ Modelo y ficha del autor: https://huggingface.co/mancalazure/construction-ppe-sa
 (fichero `best.onnx`, pesos CC BY 4.0 y SHA-256 fijado en script). No se incluyen
 pesos en el ZIP; se descargan explícitamente para desarrollo y opcionalmente en el
 build de Vercel tras verificar consumo de recursos.
+
+### Ajuste de encuadre y alerta flotante (E2 — 19/11/2026)
+- `src/modules/monitoring/captureZoom.ts` expresa la reproyección para una `PerspectiveCamera` con zoom óptico centrado. Una modificación de zoom **no cambia posiciones del mundo 3D**, pero sí los puntos normalizados de la imagen de captura.
+- `useVirtualMonitoring` valida la reproyección antes de guardar un nuevo polígono en el repositorio local versionado. No se recorta silenciosamente la zona. Guarda el zoom en la preferencia local `vision-ai.capture-zoom-by-camera.v1`, aislada por identidad mediante `AccountStorageProvider`.
+- Cuando cambia la firma de configuración se reinicia el seguimiento para descartar cajas antiguas; el centro de incidentes trata el cambio como interrupción de monitoreo, no como salida confirmada.
+- La notificación de `AlarmStatusBar` sigue siendo un aviso de presentación independiente del estado de incidentes, con límites de viewport en móviles y acciones accesibles.

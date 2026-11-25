@@ -30,6 +30,7 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ImagePoint[]>([]);
   const [zoneError, setZoneError] = useState('');
+  const [zoomMessage, setZoomMessage] = useState('');
   const currentCamera = cameras.find(camera => camera.id === monitor.cameraId);
   const available = monitor.mode === 'all'
     ? monitor.virtualCameraIds.some(id => cameras.some(camera => camera.id === id && camera.enabled && camera.sourceType === 'virtual-3d'))
@@ -42,7 +43,7 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
   const isSweeping = Boolean(currentCamera?.virtualSweep);
 
   function changeCamera(id: string) {
-    setEditing(false); setDraft([]); setZoneError('');
+    setEditing(false); setDraft([]); setZoneError(''); setZoomMessage('');
     monitor.setCameraId(id);
     onSelectCamera(id);
   }
@@ -199,7 +200,10 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
           )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-xs text-[var(--muted)]"><Focus size={15}/> Zoom de captura
-              <select aria-label="Zoom de captura" className={control} disabled={Boolean(monitor.zone)} title={monitor.zone ? 'Retira la zona antes de cambiar el zoom y vuelve a dibujarla' : undefined} value={monitor.zoom} onChange={e => monitor.setZoom(Number(e.target.value))}><option value="1">1.0×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.6">1.6×</option></select>
+              <select aria-label="Zoom de captura" className={control} value={monitor.zoom} onChange={e => {
+                const error = monitor.setZoom(Number(e.target.value));
+                setZoomMessage(error ?? (monitor.zone ? 'Zoom actualizado; zona recalibrada y versionada localmente.' : 'Zoom actualizado.'));
+              }}><option value="1">1.0×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.6">1.6×</option></select>
             </label>
             {modelReady ? <Button variant="secondary" size="sm" onClick={monitor.stopModel}><Square size={14}/> Detener YOLO</Button>
               : <Button variant="primary" size="sm" disabled={monitor.modelState === 'loading' || !available || Boolean(monitor.worldError)} onClick={() => { void monitor.initializeModel(); }}><Play size={14}/>{monitor.modelState === 'loading' ? 'Cargando ONNX…' : 'Activar YOLO real'}</Button>}
@@ -225,7 +229,8 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
             <p className="mt-2 text-[11px] text-[var(--muted)]">Requiere `node scripts/download-cone-model-stage8.mjs`; el ONNX de 12,2 MB no está incluido en el ZIP. No se ha validado la precisión con imágenes etiquetadas. Modelo <a className="underline" href="https://huggingface.co/mancalazure/construction-ppe-safety" target="_blank" rel="noreferrer">mancalazure/construction-ppe-safety</a> (pesos CC BY 4.0).</p>
           </div>
           {!available && <div role="status" className="rounded-lg bg-[var(--warning-bg)] p-3 text-xs text-[var(--warning)]">Esta perspectiva requiere el registro {monitor.cameraId} habilitado como fuente 3D en <Link className="underline" to="/camaras">Cámaras</Link>.</div>}
-          {monitor.zone && <p className="text-[11px] text-[var(--muted)]">El zoom permanece fijo mientras haya una zona restringida activa. Para cambiarlo, quita la zona y vuelve a dibujarla.</p>}
+          <p className="text-[11px] leading-5 text-[var(--muted)]">El zoom solo amplía la imagen enviada a YOLO. Si existe una zona, sus vértices se recalibran y se guarda una versión local; los encuadres que la recorten se rechazan.</p>
+          {zoomMessage && <p role="status" aria-live="polite" className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-2 text-xs">{zoomMessage}</p>}
           {isSweeping && <div role="status" className="mb-3 rounded-lg border border-[var(--notice-border)] bg-[var(--notice-bg)] p-3 text-xs">Barrido automático activo: YOLO detecta personas, pero las zonas de imagen y sus alarmas están suspendidas para evitar falsas intrusiones. Cambia a cámara fija en Cámaras para activarlas.</div>}
           <div className="relative mx-auto aspect-[4/3] max-w-[760px] overflow-hidden rounded-xl border border-[var(--border)] bg-[#29343d]">
             <canvas ref={monitor.previewCanvasRef} width={640} height={480} className="block h-full w-full" aria-label="Fotograma RGB enviado a YOLO" />

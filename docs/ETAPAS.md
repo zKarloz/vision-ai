@@ -787,3 +787,10 @@ incluir el peso en Vercel se deberá configurar un paso de descarga de la versi�
 fijada durante el build (`node scripts/download-cone-model-stage8.mjs && npm run build`)
 solo después de validar E2 localmente. El sitio sin archivo seguirá funcionando con
 personas y DEMO geométrica, y mostrará un error útil al intentar iniciar conos reales.
+
+### Ajuste complementario E2 — Interfaz móvil y zoom (19/11/2026)
+- Notificación flotante de alarma: anchura acotada al viewport, acciones en cuadrícula en móviles y altura máxima con desplazamiento interno. Se conserva el diálogo compartido de reconocimiento y la animación de salida.
+- Zoom de captura 3D: se habilita el selector aunque exista una zona restringida. Al elegir otro valor, se reproyecta el polígono (respecto al centro óptico) y se publica una nueva versión **local** de configuración; si algún vértice sale del encuadre, el cambio se bloquea antes de guardar.
+- El factor de zoom se conserva por cuenta y cámara en almacenamiento local, para evitar desalineación de la zona tras recargar.
+- No se modifican las políticas RLS, el historial ni los datos remotos. El cambio de encuadre reinicia el seguimiento local y mantiene los incidentes pendientes de revisión.
+- Aceptación pendiente de pruebas en dispositivo real (anchos 320/375 px y zoom 1×/1.25×/1.5×/1.6× sobre CAM-02). La prueba automatizada comprueba reproyección, validación y persistencia de preferencias; no sustituye la prueba visual.
