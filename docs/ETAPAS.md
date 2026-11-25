@@ -794,3 +794,25 @@ personas y DEMO geométrica, y mostrará un error útil al intentar iniciar cono
 - El factor de zoom se conserva por cuenta y cámara en almacenamiento local, para evitar desalineación de la zona tras recargar.
 - No se modifican las políticas RLS, el historial ni los datos remotos. El cambio de encuadre reinicia el seguimiento local y mantiene los incidentes pendientes de revisión.
 - Aceptación pendiente de pruebas en dispositivo real (anchos 320/375 px y zoom 1×/1.25×/1.5×/1.6× sobre CAM-02). La prueba automatizada comprueba reproyección, validación y persistencia de preferencias; no sustituye la prueba visual.
+
+### E2 — Despliegue reproducible del modelo de conos en Vercel (25/11/2026)
+- Incidencia detectada: el despliegue anterior solo descargaba YOLO de personas;
+  el detector secundario informaba "Falta el modelo de conos" porque el peso
+  ONNX está ignorado por Git y no llegaba a `dist/models/`.
+- `vercel.json` fija ahora el comando de build con ambas descargas SHA-256,
+  compilación Vite, verificación estricta del binario E2 empaquetado y auditoría
+  pública existente. Mantiene el rewrite SPA original sin cambios.
+- `scripts/verify-cone-release-stage8.mjs` comprueba el contenido de
+  `dist/models/vision-cones-ppe.onnx`. Si falta o su huella difiere de la versión
+  fijada, el despliegue **falla** en lugar de ocultar la ausencia del modelo.
+- Las seis pruebas nuevas validan el contrato de despliegue, conservación de SPA,
+  coincidencia de SHA, archivo faltante, integridad y detección de sustituciones.
+- El comando de Vercel se configura desde el repositorio (tiene prioridad sobre
+  el del dashboard). No se suben pesos ONNX a Git, no se modifica Supabase.
+- Aceptación pendiente: publicar el commit, comprobar en Deployments los logs
+  de ambas descargas y del verificador; abrir `/models/vision-cones-ppe.onnx`
+  y probar "Activar conos reales" en el navegador de producción. La existencia
+  del archivo **no** demuestra precisión de detección ni ausencia de errores
+  de GPU/WASM durante la inferencia.
+- El pipeline de GitHub Actions replica la descarga y el chequeo del ONNX E2
+  antes de aprobar el build, sin añadir secretos al repositorio.

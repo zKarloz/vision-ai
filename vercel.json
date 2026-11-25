@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run model:download && node scripts/download-cone-model-stage8.mjs && npm run build && node scripts/verify-cone-release-stage8.mjs && npm run audit:release",
   "rewrites": [
     {
       "source": "/(.*)",

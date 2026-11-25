@@ -29,11 +29,16 @@ jobs:
         run: npm ci
       - name: Preparar modelo YOLO verificado
         run: npm run model:download
+      # Igual que Vercel: ambos pesos ONNX deben pasar la descarga con SHA-256.
+      - name: Preparar modelo E2 de conos verificado
+        run: node scripts/download-cone-model-stage8.mjs
       - name: Ejecutar pruebas
         run: npm run test
       - name: Comprobar tipos
         run: npm run typecheck
       - name: Construir para Vercel
         run: npm run build
+      - name: Comprobar que Vite incluyó el modelo E2
+        run: node scripts/verify-cone-release-stage8.mjs
       - name: Auditar recursos públicos y modelo ONNX
         run: npm run audit:release

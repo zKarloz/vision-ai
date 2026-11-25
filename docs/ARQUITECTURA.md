@@ -309,3 +309,17 @@ build de Vercel tras verificar consumo de recursos.
 - `useVirtualMonitoring` valida la reproyección antes de guardar un nuevo polígono en el repositorio local versionado. No se recorta silenciosamente la zona. Guarda el zoom en la preferencia local `vision-ai.capture-zoom-by-camera.v1`, aislada por identidad mediante `AccountStorageProvider`.
 - Cuando cambia la firma de configuración se reinicia el seguimiento para descartar cajas antiguas; el centro de incidentes trata el cambio como interrupción de monitoreo, no como salida confirmada.
 - La notificación de `AlarmStatusBar` sigue siendo un aviso de presentación independiente del estado de incidentes, con límites de viewport en móviles y acciones accesibles.
+
+### Distribución estática de modelo E2 en Vercel (25/11/2026)
+El modelo `vision-cones-ppe.onnx` pertenece a los recursos estáticos públicos
+que consume el `cone.worker.ts`. No se aloja en Supabase ni se incorpora al
+repositorio Git. `vercel.json` ordena descargar y verificar SHA-256 tanto
+`yolov8n.onnx` como `vision-cones-ppe.onnx` **antes** de `vite build`.
+Vite copia ambos archivos desde `public/models/` hacia `dist/models/`.
+Después del build, `verify-cone-release-stage8.mjs` valida que el binario de
+conos que se servirá en producción existe y coincide con la huella aprobada.
+La auditoría general (`audit:release`) continúa verificando modelo de personas,
+WASM, integridad SPA y ausencia de patrones conocidos de secretos. El fallo de
+cualquier paso cancela el despliegue, sin modificar reglas, incidentes ni RLS.
+GitHub Actions ejecuta también la descarga y verificación de este modelo en
+CI para evitar divergencias entre pruebas de calidad y despliegue productivo.
