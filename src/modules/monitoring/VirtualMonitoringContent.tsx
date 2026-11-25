@@ -76,6 +76,8 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
       metrics: { samples: monitor.samples.length, fps: monitor.fps, averageInferenceMs: monitor.averageMs },
       incidents: monitor.incidents, eventLog: monitor.log, samples: monitor.samples, analyses: monitor.analyses,
       cautionDemo: { source: 'DEMO — trayectoria 3D, sin detección de cono por YOLO', events: monitor.cautionDemoLog },
+      coneReal: { source: 'REAL experimental — modelo PPE/ONNX separado', enabled: monitor.coneState === 'ready',
+        cameraId: monitor.cameraId, detections: monitor.cones, inferenceMs: monitor.coneInferenceMs },
       note: 'Las detecciones de personas provienen de YOLO. La DEMO de conos usa trayectorias 3D predefinidas, queda separada del historial oficial y nunca activa sirena. Los conteos multicámara pueden duplicar personas.',
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
@@ -203,6 +205,25 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
               : <Button variant="primary" size="sm" disabled={monitor.modelState === 'loading' || !available || Boolean(monitor.worldError)} onClick={() => { void monitor.initializeModel(); }}><Play size={14}/>{monitor.modelState === 'loading' ? 'Cargando ONNX…' : 'Activar YOLO real'}</Button>}
           </div>
           {monitor.modelError && <div role="alert" className="flex items-start gap-2 rounded-lg bg-[var(--danger-bg)] p-3 text-xs text-[var(--danger)]"><AlertCircle size={16} className="shrink-0"/><span>{monitor.modelError} Comprueba `npm run model:download` o cambia de WebGPU a WASM.</span></div>}
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--muted-bg)] p-3" aria-label="E2 detección real opcional de conos">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-2 text-xs font-bold"><Construction size={16} className="text-amber-700 dark:text-amber-400"/> E2 · Detección REAL de conos (experimental)</p>
+                <p className="mt-1 text-[11px] leading-5 text-[var(--muted)]">Modelo ONNX adicional y opcional. Solo aviso visual, <strong>sin sirena, incidentes ni escritura en Supabase</strong>.</p>
+              </div>
+              {monitor.coneState === 'ready'
+                ? <Button size="sm" variant="secondary" onClick={monitor.stopConeModel}><Square size={14}/> Detener conos</Button>
+                : <Button size="sm" variant="secondary" disabled={!modelReady || monitor.coneState === 'loading'} onClick={() => { void monitor.initializeConeModel(); }}>
+                  <Play size={14}/>{monitor.coneState === 'loading' ? 'Cargando conos…' : 'Activar conos reales'}
+                </Button>}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]" role="status">
+              <span className="font-semibold">{monitor.coneState === 'ready' ? 'REAL · ONNX (experimental)' : monitor.coneState === 'loading' ? 'Inicializando motor secundario' : 'Modelo secundario detenido'}</span>
+              <span className="text-[var(--muted)]">{monitor.cones.length} cono(s) observado(s) · {monitor.coneInferenceMs === null ? '—' : `${fmt(monitor.coneInferenceMs)} ms`} inferencia</span>
+            </div>
+            {monitor.coneError && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{monitor.coneError}</p>}
+            <p className="mt-2 text-[11px] text-[var(--muted)]">Requiere `node scripts/download-cone-model-stage8.mjs`; el ONNX de 12,2 MB no está incluido en el ZIP. No se ha validado la precisión con imágenes etiquetadas. Modelo <a className="underline" href="https://huggingface.co/mancalazure/construction-ppe-safety" target="_blank" rel="noreferrer">mancalazure/construction-ppe-safety</a> (pesos CC BY 4.0).</p>
+          </div>
           {!available && <div role="status" className="rounded-lg bg-[var(--warning-bg)] p-3 text-xs text-[var(--warning)]">Esta perspectiva requiere el registro {monitor.cameraId} habilitado como fuente 3D en <Link className="underline" to="/camaras">Cámaras</Link>.</div>}
           {monitor.zone && <p className="text-[11px] text-[var(--muted)]">El zoom permanece fijo mientras haya una zona restringida activa. Para cambiarlo, quita la zona y vuelve a dibujarla.</p>}
           {isSweeping && <div role="status" className="mb-3 rounded-lg border border-[var(--notice-border)] bg-[var(--notice-bg)] p-3 text-xs">Barrido automático activo: YOLO detecta personas, pero las zonas de imagen y sus alarmas están suspendidas para evitar falsas intrusiones. Cambia a cámara fija en Cámaras para activarlas.</div>}
@@ -214,6 +235,12 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
               {polygon.length >= 2 && <polyline points={polygon.map(p => `${p.x*640},${p.y*480}`).join(' ')} fill="none" stroke="#b42318" strokeWidth="2.5" strokeDasharray={editing ? '6 4' : '0'}/>}
               {polygon.length >= 3 && <polygon points={polygon.map(p => `${p.x*640},${p.y*480}`).join(' ')} fill="rgba(180,35,24,0.14)" stroke="#b42318" strokeWidth="2.5"/>}
               {polygon.map((p, i) => <circle key={`${i}-${p.x}`} cx={p.x*640} cy={p.y*480} r="4" fill="white" stroke="#b42318" strokeWidth="2"/>)}
+              {!editing && monitor.cones.map((cone, i) => <g key={`cone-real-${i}`} aria-label={`Cono real detectado, confianza ${Math.round(cone.confidence * 100)} por ciento`}>
+                <rect x={cone.box.x*640} y={cone.box.y*480} width={cone.box.width*640} height={cone.box.height*480}
+                  stroke="#d97706" strokeWidth="3" fill="rgba(217,119,6,0.10)"/>
+                <rect x={cone.box.x*640} y={Math.max(0,cone.box.y*480-18)} width="116" height="18" fill="#92400e" rx="3"/>
+                <text x={cone.box.x*640+4} y={Math.max(13,cone.box.y*480-5)} fill="white" fontSize="10" fontWeight="bold">REAL · Cono {Math.round(cone.confidence*100)}%</text>
+              </g>)}
               {!editing && monitor.tracks.map(track => <g key={track.id} opacity={track.seen ? 1 : 0.5}>
                 <rect x={track.box.x*640} y={track.box.y*480} width={track.box.width*640} height={track.box.height*480}
                   fill="none" stroke={trackVisualState(track).color} strokeWidth="3" strokeDasharray={track.seen ? undefined : '8 6'} />
@@ -228,6 +255,7 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
             <span className="rounded-md bg-[#167d4a] px-2 py-1 text-white">Verde · fuera de zona</span>
             <span className="rounded-md bg-[#b42318] px-2 py-1 text-white">Rojo · dentro de zona</span>
             <span className="rounded-md bg-[#64748b] px-2 py-1 text-white">Gris · sin zona o detección</span>
+            <span className="rounded-md bg-[#92400e] px-2 py-1 text-white">Ámbar · cono REAL (opcional)</span>
           </div>
           <p className="text-[11px] text-[var(--muted)]">El semáforo corresponde al punto inferior de la caja detectada por YOLO frente al polígono de esta cámara. Rojo no implica por sí solo incidente confirmado.</p>
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -285,7 +313,7 @@ export function VirtualMonitoringContent({ initialCameraId, onSelectCamera }: { 
     </div>
     <div className="mt-5 flex flex-wrap items-start gap-3 rounded-xl border border-[var(--notice-border)] bg-[var(--notice-bg)] p-4 text-xs leading-5 text-[var(--muted)]">
       <AlertCircle size={18} className="shrink-0 text-[var(--accent)]"/>
-      <p><strong className="text-[var(--text)]">Alcance de las cámaras 3D.</strong> Todas las perspectivas virtuales comparten una escena y un Worker YOLO, con seguimiento independiente. Las fuentes MP4/WebM y webcam ya se pueden conectar desde el selector superior; cámaras virtuales configurables desde el gestor, RTSP y almacenamiento remoto siguen pendientes. El modelo actual solo detecta personas; la demostración de conos es independiente de YOLO y no forma parte del historial oficial.</p>
+      <p><strong className="text-[var(--text)]">Alcance de las cámaras 3D.</strong> Todas las perspectivas virtuales comparten una escena y un Worker YOLO, con seguimiento independiente. Las fuentes MP4/WebM y webcam ya se pueden conectar desde el selector superior; cámaras virtuales configurables desde el gestor, RTSP y almacenamiento remoto siguen pendientes. El motor principal detecta personas; el motor opcional E2 detecta conos experimentalmente sobre píxeles, sin incidentes. La DEMO geométrica de conos sigue separada del historial oficial.</p>
     </div>
   </>;
 }

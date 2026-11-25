@@ -749,3 +749,41 @@ npm run test && npm run typecheck && npm run build && npm run audit:release
 **Decisión arquitectónica propuesta, pendiente de justificación técnica y aprobación antes de implementarse:** NO agregar todavía API Python ni servicio WebSocket. El Worker ONNX actual funciona en el navegador; un servicio Python implicaría nuevos recursos, despliegue y tratamiento de datos, y WebSocket sería una mejora de comunicación distinta de la precisión del modelo. Primero medir precisión real y rendimiento por cámara, contrastar límites gratuitos, y decidir si la necesidad (conos/EPP, inferencia independiente del navegador o transmisión inmediata entre clientes) compensa el cambio. No se han modificado migraciones, RLS, datos de producción, motor YOLO, flujo de incidentes ni cron.
 
 **Siguientes hitos E2/E3:** construir corpus **real etiquetado y autorizado** para `persona`, `cono`, `casco`, `chaleco`; elegir/entrenar o adaptar un detector compatible con el contrato `VisionEngine`; ejecutar evaluación y pruebas de precisión/recall bajo distintos escenarios antes de activar alertas oficiales de cono o EPP. Mantener la DEMO geométrica aislada de la detección real. Después comparar ONNX Web Worker vs Python/WebSocket según evidencia y costo real.
+
+## Etapa 8 — E2.1: detección experimental de conos por ONNX (19/11/2026)
+
+**Objetivo:** verificar en píxeles el cono de precaución sin recurrir a la geometría DEMO.
+Se mantiene el YOLOv8n COCO de personas y toda su lógica de incidentes; se añade un
+**segundo Web Worker opcional** para conos, activado manualmente y con capturas
+espaciadas al menos 650 ms. No se cambia Supabase, RLS, usuarios ni el motor de reglas.
+
+- Modelo candidato: `mancalazure/construction-ppe-safety`, `best.onnx` (YOLOv8n),
+  clase `Safety Cone` = índice 6, entrada 640×640 estirada, salida `[1,14,8400]`.
+  **No** utilizar `model-deepstream.onnx`, porque su salida es diferente.
+- Los pesos se descargan con `node scripts/download-cone-model-stage8.mjs` y se
+  verifican mediante SHA-256. La descarga no está dentro del ZIP incremental.
+- Una etiqueta **REAL · Cono** aparece exclusivamente sobre cajas devueltas por ONNX,
+  con porcentaje de confianza. Los resultados son temporales en memoria y exportables
+  como metadatos JSON. Jamás entran a `VisualZoneMonitor`, `IncidentCenter` ni a las
+  tablas oficiales: **sin sirena** y sin alteraciones del ciclo de intrusión.
+- La DEMO geométrica se conserva como un módulo explícitamente simulado y separado.
+- Las 11 pruebas nuevas cubren el formato exacto de salida, índice de clase,
+  filtro por confianza, recorte de cajas y NMS.
+
+**Pendiente antes de dar E2 por aprobado:** `npm run test && npm run typecheck && npm run build`,
+probar activación/desactivación en CAM-02 y en video/webcam (este incremento solo
+visualiza conos en la escena 3D), comparar detecciones con conos físicos o sintéticos,
+medir impacto sobre FPS y evaluar errores/oclusiones. La precisión del modelo no ha
+sido medida en VISION AI. Si falta el ONNX, el detector secundario debe informar error
+sin interrumpir las alertas de personas.
+
+**Licencias:** el repositorio del modelo declara los pesos bajo **CC BY 4.0**, que
+requiere atribución. La herramienta de exportación está vinculada a Ultralytics/AGPL;
+revisar las obligaciones aplicables antes de comercializar. El proyecto no redistribuye
+pesos en el ZIP. No presentar el modelo como sistema industrial homologado.
+
+**Despliegue:** `public/models/*.onnx` está excluido de Git por `.gitignore`. Para
+incluir el peso en Vercel se deberá configurar un paso de descarga de la versión
+fijada durante el build (`node scripts/download-cone-model-stage8.mjs && npm run build`)
+solo después de validar E2 localmente. El sitio sin archivo seguirá funcionando con
+personas y DEMO geométrica, y mostrará un error útil al intentar iniciar conos reales.

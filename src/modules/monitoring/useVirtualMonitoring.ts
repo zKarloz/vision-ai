@@ -12,6 +12,8 @@ import { VisualZoneMonitor, DEFAULT_TRACKING_OPTIONS, type VisionTrack } from '.
 import { SimulationWorld, type CameraId as WorldCameraId, type SimulationSnapshot } from '../../infrastructure/simulation/SimulationWorld';
 import type { CautionDemoEvent } from '../../infrastructure/simulation/PrecautionDemo';
 import { OnnxWorkerVisionEngine } from '../../infrastructure/vision/OnnxWorkerVisionEngine';
+import { OnnxConeWorkerEngine } from '../../infrastructure/vision/OnnxConeWorkerEngine';
+import type { SafetyConeDetection } from '../../vision/conePostprocess';
 import { CameraRoundRobin, freshObservedCount, type AnalysisMode } from './cameraScheduler';
 import { recentAnalysisFps } from './analysisPerformance';
 import { DEFAULT_CAPTURE_INTERVAL_MS, type CaptureIntervalMs } from './captureInterval';
@@ -27,6 +29,11 @@ export interface CameraAnalysis {
   lastAtMs: number | null;
 }
 export type CameraAnalyses = Record<CameraId, CameraAnalysis>;
+export interface ConeObservation { detections: SafetyConeDetection[]; lastAtMs: number; inferenceMs: number }
+
+// Muestreo secundario reducido: no compete con el ciclo de alarma a cada frame.
+const CONE_SAMPLE_INTERVAL_MS = 650;
+const CONE_CONFIDENCE_THRESHOLD = 0.4;
 
 function emptyAnalysis(): CameraAnalysis {
   return { detections: [], tracks: [], samples: [], inferenceTotalMs: null, lastAtMs: null };
@@ -48,6 +55,11 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const worldRef = useRef<SimulationWorld | null>(null);
   const engineRef = useRef<OnnxWorkerVisionEngine | null>(null);
+  // E2: Worker opcional e independiente. Nunca pasa conos a IncidentCenter.
+  const coneEngineRef = useRef<OnnxConeWorkerEngine | null>(null);
+  const coneBusyRef = useRef(false);
+  const coneGenerationRef = useRef(0);
+  const coneLastSampleRef = useRef<Record<string, number>>({});
   const trackersRef = useRef<Record<string, VisualZoneMonitor>>({});
   const incidentsRef = useRef(new VisualIncidentCoordinator());
   const schedulerRef = useRef(new CameraRoundRobin());
@@ -63,6 +75,9 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   const [worldError, setWorldError] = useState('');
   const [modelState, setModelState] = useState<ModelState>('idle');
   const [modelError, setModelError] = useState('');
+  const [coneState, setConeState] = useState<ModelState>('idle');
+  const [coneError, setConeError] = useState('');
+  const [conesByCamera, setConesByCamera] = useState<Record<string, ConeObservation>>({});
   const [provider, setProvider] = useState<Provider>('webgpu');
   const [threshold, setThreshold] = useState(0.25);
   const [intervalMs, setIntervalMs] = useState<CaptureIntervalMs>(DEFAULT_CAPTURE_INTERVAL_MS);
@@ -94,6 +109,9 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     incidentsRef.current.reset();
     schedulerRef.current.reset();
     setAnalyses(emptyAnalyses(virtualCameraIds));
+    coneGenerationRef.current++;
+    coneLastSampleRef.current = {};
+    setConesByCamera({});
     setIncidents([]);
     setLog([]);
   }
@@ -132,7 +150,12 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => () => { mountedRef.current = false; engineRef.current?.dispose(); engineRef.current = null; }, []);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    engineRef.current?.dispose(); engineRef.current = null;
+    coneEngineRef.current?.dispose(); coneEngineRef.current = null;
+    coneGenerationRef.current++;
+  }, []);
   // La URL puede seleccionar otra perspectiva sin recrear la escena.
   useEffect(() => { setCameraId(initialCameraId); }, [initialCameraId]);
   useEffect(() => { worldRef.current?.setVirtualCameras(config.cameras);
@@ -156,6 +179,8 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
         for (const tracker of Object.values(trackersRef.current)) tracker.reset();
         incidentsRef.current.reset();
         // No mostrar cajas o conteos como si fuesen detecciones en directo.
+        setConesByCamera({});
+        coneGenerationRef.current++;
         setAnalyses(previous => Object.fromEntries(Object.entries(previous).map(([id, state]) => [id, {
           ...state, tracks: [], detections: [], lastAtMs: null,
         }])));
@@ -190,6 +215,9 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     incidentsRef.current.reset();
     schedulerRef.current.reset();
     setAnalyses(emptyAnalyses(virtualCameraIds));
+    coneGenerationRef.current++;
+    coneLastSampleRef.current = {};
+    setConesByCamera({});
     setIncidents([]); setLog([]);
     // Importaciones/versiones nuevas se detectan por su contenido, no sólo por el número.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,6 +239,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
         setAnalyses(previous => Object.fromEntries(Object.entries(previous).map(([id, value]) =>
           [id, removed.includes(id) ? emptyAnalysis() : value])));
         const history = incidentsRef.current.snapshot();
+        setConesByCamera(previous => Object.fromEntries(Object.entries(previous).filter(([id]) => !removed.includes(id))));
         setIncidents(history.incidents); setLog(history.log);
       }
       previousObservedRef.current = nowObserved;
@@ -297,6 +326,52 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
           lastAtMs: observedAt,
         } }));
         setIncidents(history.incidents); setLog(history.log);
+
+        // E2: ejecución opcional del detector de conos en un Worker diferente.
+        // Se crea una copia de la captura REAL, no se consultan las posiciones 3D.
+        // Este resultado no se entrega a los casos de uso de incidentes/alarma.
+        const coneEngine = coneEngineRef.current;
+        if (coneState === 'ready' && coneEngine && !coneBusyRef.current &&
+            observedAt - (coneLastSampleRef.current[target] ?? -Infinity) >= CONE_SAMPLE_INTERVAL_MS) {
+          coneBusyRef.current = true;
+          coneLastSampleRef.current[target] = observedAt;
+          const coneGeneration = coneGenerationRef.current;
+          try {
+            const coneFrame = await createImageBitmap(scratch);
+            if (!active || document.hidden || generation !== generationRef.current ||
+                coneGeneration !== coneGenerationRef.current) {
+              coneFrame.close();
+              coneBusyRef.current = false;
+            } else {
+              void coneEngine.analyze(coneFrame, CONE_CONFIDENCE_THRESHOLD).then(result => {
+                if (active && !document.hidden && generation === generationRef.current &&
+                    coneGeneration === coneGenerationRef.current &&
+                    monitoredCameraIdsRef.current.includes(target)) {
+                  setConesByCamera(previous => ({ ...previous, [target]: {
+                    detections: result.detections, lastAtMs: performance.now(), inferenceMs: result.inferenceMs,
+                  } }));
+                }
+              }).catch(error => {
+                // Una falla experimental NO detiene YOLO-personas ni sus alertas.
+                if (coneEngineRef.current === coneEngine) {
+                  coneEngine.dispose(); coneEngineRef.current = null;
+                  coneGenerationRef.current++;
+                  setConeState('error');
+                  setConeError(error instanceof Error ? error.message : String(error));
+                  setConesByCamera({});
+                }
+              }).finally(() => { coneBusyRef.current = false; });
+            }
+          } catch (error) {
+            coneBusyRef.current = false;
+            if (coneEngineRef.current === coneEngine) {
+              coneEngine.dispose(); coneEngineRef.current = null;
+              coneGenerationRef.current++;
+              setConeState('error');
+              setConeError(error instanceof Error ? error.message : String(error));
+            }
+          }
+        }
       } catch (error) {
         if (active && engineRef.current === engine) {
           incidentCenter.markMonitoringInterrupted(monitoredCameraIdsRef.current, 'Error de inferencia 3D');
@@ -312,7 +387,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     return () => { active = false; window.clearInterval(timer); };
     // Dependencias de configuración: el resultado de una inferencia antigua se descarta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelState, cameraId, mode, threshold, intervalMs, configSignature, worldError, pageVisible]);
+  }, [modelState, coneState, cameraId, mode, threshold, intervalMs, configSignature, worldError, pageVisible]);
 
   async function initializeModel(): Promise<void> {
     if (modelState === 'loading' || modelState === 'ready') return;
@@ -334,7 +409,44 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     }
   }
 
+  /** Activación manual separada: el peso ONNX adicional se carga bajo demanda. */
+  async function initializeConeModel(): Promise<void> {
+    if (modelState !== 'ready' || coneState === 'loading' || coneState === 'ready') return;
+    const engine = new OnnxConeWorkerEngine();
+    coneEngineRef.current?.dispose(); coneEngineRef.current = engine;
+    coneGenerationRef.current++;
+    setConeState('loading'); setConeError('');
+    try {
+      await engine.initialize(provider);
+      if (!mountedRef.current || coneEngineRef.current !== engine || document.hidden) {
+        engine.dispose();
+        if (coneEngineRef.current === engine) { coneEngineRef.current = null; setConeState('idle'); }
+        return;
+      }
+      setConeState('ready');
+    } catch (error) {
+      const isCurrent = coneEngineRef.current === engine;
+      engine.dispose();
+      if (isCurrent) {
+        coneEngineRef.current = null;
+        if (mountedRef.current) {
+          setConeState('error');
+          setConeError(error instanceof Error ? error.message : String(error));
+        }
+      }
+    }
+  }
+
+  function stopConeModel(): void {
+    coneGenerationRef.current++;
+    coneEngineRef.current?.dispose(); coneEngineRef.current = null;
+    coneLastSampleRef.current = {};
+    setConesByCamera({});
+    setConeState('idle'); setConeError('');
+  }
+
   function stopModel(): void {
+    stopConeModel();
     engineRef.current?.dispose(); engineRef.current = null;
     setModelState('idle'); setModelError('');
     clearAnalysis('YOLO detenido manualmente');
@@ -368,6 +480,10 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
   // Un overlay antiguo no permanece visible cuando la cámara deja de muestrearse.
   const showSelectedTracks = pageVisible && cameraStats[cameraId].scanning && visible.lastAtMs !== null &&
     now - visible.lastAtMs <= maxAgeMs;
+  const cones = pageVisible && coneState === 'ready' && cameraStats[cameraId]?.scanning &&
+    conesByCamera[cameraId] && now - conesByCamera[cameraId].lastAtMs < 2500
+    ? conesByCamera[cameraId].detections : [];
+  const coneInferenceMs = conesByCamera[cameraId]?.inferenceMs ?? null;
   const samples = visible.samples;
   // Solo muestras del período visible actual; nunca amortizamos los FPS con pausas ocultas.
   const fps = pageVisible ? recentAnalysisFps(samples, now, foregroundSinceMs, intervalMs,
@@ -379,6 +495,7 @@ export function useVirtualMonitoring(initialCameraId: WorldCameraId = 'CAM-02') 
     sceneCanvasRef, previewCanvasRef, cameraId, setCameraId, snapshot, worldError,
     mode, setMode, virtualCameraIds, cameraStats, totalDetections, pageVisible, foregroundSinceMs,
     modelState, modelError, provider, setProvider, initializeModel, stopModel,
+    coneState, coneError, initializeConeModel, stopConeModel, cones, coneInferenceMs,
     threshold, setThreshold, intervalMs, setIntervalMs,
     zoom, setZoom, polygons, setZonePoints, zone,
     detections: showSelectedTracks ? visible.detections : [],

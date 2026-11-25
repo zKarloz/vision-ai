@@ -276,3 +276,30 @@ Para cámaras 3D con `lossGraceMs`, el vencimiento se determina por el tiempo mo
 **Diferencia DEMO/REAL:** `decodePeople()` continúa leyendo exclusivamente `person` (clase 0 COCO). Cualquier resultado para conos/cascos/chalecos en el CLI solo evalúa las predicciones **entregadas** como entrada; no significa que el modelo actual las pueda generar. La integración de un detector para esas clases requerirá validación de modelo, compatibilidad de pre/postprocesado, umbral propio por clase y pruebas de no regresión. Se conserva `VisionEngine`, el Worker, Three.js, la separación por cámara, la auditoría y RLS existentes.
 
 **Comparación de opciones a decidir después de datos etiquetados:** (1) detector compatible con ONNX Runtime Web en el Worker: reutiliza la infraestructura actual, sin servicio nuevo, pero depende del navegador y hardware; (2) API Python + servicio de visión: permitiría ejecución independiente del navegador y modelos mayores, pero requiere servidor disponible, ancho de banda, protocolos seguros, costos y cambios de privacidad; (3) WebSocket/SSE: resuelve distribución más inmediata entre clientes, no mejora por sí mismo la detección ni sustituye la evaluación del modelo. Ninguna alternativa está aprobada o desplegada por este incremento.
+
+## E2.1 — Adaptador de conos independiente (19/11/2026)
+
+`useVirtualMonitoring` mantiene `OnnxWorkerVisionEngine` (COCO persona) y puede
+activar `OnnxConeWorkerEngine` (PPE `Safety Cone`, clase 6) manualmente. Cada adaptador
+posee un Web Worker y una sesión ONNX aislada; la inferencia secundaria usa
+`createImageBitmap` del mismo fotograma RGB a intervalos ≥650 ms. Las coordenadas
+proceden únicamente de píxeles y se normalizan sobre la imagen original. La
+preparación del segundo modelo respeta la exportación `stretch 640×640` indicada por
+su autor (no el letterbox 640×480 del motor de personas).
+
+**Separación invariante:**
+`cono.real` → `conePostprocess` → estado temporal/overlay ámbar/JSON local;
+**nunca** → `VisualIncidentCoordinator` / `IncidentCenter` / `vision_incidents` /
+alarma sonora. `persona.real` sigue el camino de reglas, incidentes y reportes.
+`cono.demo` permanece en `PrecautionDemo` y se etiqueta DEMO. No se almacenan imágenes.
+
+El motor secundario se activa bajo demanda: si falla su descarga/inicialización/
+inferencia no debe detener el modelo de personas ni falsificar una salida confirmada.
+Durante una pestaña oculta se invalidan los resultados de conos. Todavía no hay
+asociación geométrica validada persona–cono ni informes oficiales de precaución; se
+considerarán en una fase posterior y con una decisión explícita de modelo de datos.
+
+Modelo y ficha del autor: https://huggingface.co/mancalazure/construction-ppe-safety
+(fichero `best.onnx`, pesos CC BY 4.0 y SHA-256 fijado en script). No se incluyen
+pesos en el ZIP; se descargan explícitamente para desarrollo y opcionalmente en el
+build de Vercel tras verificar consumo de recursos.
