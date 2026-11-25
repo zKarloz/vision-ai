@@ -100,7 +100,7 @@ export function AppShell() {
       <nav aria-label="Navegación principal" className="space-y-1">{visibleNav.map(({ to, text, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors', isActive ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]')}><Icon size={18} /><span className="flex-1">{text}</span></NavLink>)}</nav>
       <div className="mt-auto border-t border-[var(--sidebar-border)] px-3 pt-4 text-[11px] text-[var(--sidebar-muted)]">VISION AI · v1.9.6</div>
     </aside>
-    <div className="min-h-screen lg:pl-[248px]">
+    <div className="min-h-screen min-w-0 max-w-full lg:pl-[248px]">
       <header className="sticky top-0 z-20 flex h-[70px] items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/95 px-5 backdrop-blur md:px-8">
         <div className="flex items-center gap-3 text-sm"><button ref={menuButtonRef} aria-label="Abrir menú" aria-expanded={mobileOpen} aria-controls="navegacion-lateral" className="rounded-lg p-2 lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><span className="hidden text-[var(--muted)] sm:inline">Plataforma</span><ChevronRight className="hidden text-[var(--muted)] sm:inline" size={15} /><span className="font-semibold">{page}</span></div>
         <div ref={accountContainerRef} className="relative">
@@ -141,7 +141,7 @@ export function AppShell() {
         </div>
       </header>
       {signOutError && <p role="alert" className="px-5 py-2 text-xs text-[var(--danger)]">{signOutError}</p>}
-      <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1600px] p-5 md:p-8"><Outlet /></main>
+      <main id="contenido" tabIndex={-1} className="mx-auto min-w-0 w-full max-w-[1600px] p-5 md:p-8"><Outlet /></main>
     </div>
   </div>;
 }

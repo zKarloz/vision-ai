@@ -33,13 +33,14 @@ export function MonitoringPage() {
     return next;
   });
 
-  return <>
+  // El contenedor limita el ancho del visor (incluidos canvas y SVG) en teléfonos.
+  return <section className="monitoring-viewport min-w-0 w-full max-w-full overflow-x-clip">
     <PageHeader title="Monitoreo de cámaras"
       description="Escenario 3D compartido o fuentes locales MP4/WebM y webcam. Las detecciones de personas proceden de YOLO sobre fotogramas reales."/>
     <AlarmStatusBar variant="floating"/>
-    <Panel className="mb-5 flex flex-wrap items-center gap-3 p-4">
+    <Panel className="mb-5 flex min-w-0 flex-wrap items-center gap-3 p-4">
       <label htmlFor="monitor-camera-source" className="text-xs font-bold">Fuente de monitoreo</label>
-      <select id="monitor-camera-source" className={`${control} min-w-[220px] flex-1 sm:flex-none`}
+      <select id="monitor-camera-source" className={`${control} min-w-0 w-full max-w-full flex-1 sm:w-auto sm:min-w-[220px] sm:flex-none`}
         value={selected?.id ?? ''} onChange={event => selectCamera(event.target.value)} disabled={!supported.length}>
         {supported.length ? supported.map(camera => <option key={camera.id} value={camera.id}>{camera.id} · {camera.name} ({camera.sourceType === 'virtual-3d' ? '3D' : camera.sourceType === 'webcam' ? 'Webcam' : 'Vídeo'})</option>) : <option value="">Sin cámaras habilitadas</option>}
       </select>
@@ -55,5 +56,5 @@ export function MonitoringPage() {
           camera={selected as CameraRecord & { sourceType: 'video-loop' | 'webcam' }}/>
     }
     </Suspense>
-  </>;
+  </section>;
 }

@@ -126,3 +126,12 @@ select:not([multiple]):not([size]) {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Monitoreo móvil: las dimensiones intrínsecas (p. ej. canvas 640×480) no
+   deben fijar el ancho mínimo de columnas Grid ni ensanchar la página. Se
+   acota sólo este módulo para no alterar tablas o formularios de otras vistas. */
+.monitoring-viewport { min-inline-size: 0; max-inline-size: 100%; }
+.monitoring-viewport .grid > * { min-inline-size: 0; }
+.monitoring-viewport canvas,
+.monitoring-viewport video,
+.monitoring-viewport svg { max-inline-size: 100%; }

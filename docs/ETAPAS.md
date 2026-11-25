@@ -816,3 +816,10 @@ personas y DEMO geométrica, y mostrará un error útil al intentar iniciar cono
   de GPU/WASM durante la inferencia.
 - El pipeline de GitHub Actions replica la descarga y el chequeo del ONNX E2
   antes de aprobar el build, sin añadir secretos al repositorio.
+
+### Hotfix E2 — Alerta flotante compacta en móviles (25/11/2026)
+
+- Se sustituyó la tarjeta de alarma de varias filas en teléfonos por una barra flotante compacta de una sola fila, sin alterar su ubicación relativa a la cabecera. Muestra contador, cámara/zona (truncados si no caben) y accesos por iconos a **Reconocer**, **Audio** e **Incidentes**.
+- Los iconos incorporan nombres accesibles y objetivos táctiles de 40 px. El reconocimiento sigue condicionado al rol y abre el mismo modal/RPC; los botones de audio y la navegación conservan su lógica. La tarjeta detallada se mantiene exclusivamente en pantallas `sm` o superiores.
+- El aviso conserva animaciones, colores de peligro y mensajes de error, con altura limitada y `overflow` interno. No se modifica el centro de incidentes, sus datos, la sirena, Supabase, YOLO ni la configuración de Vercel.
+- Se agregan 5 pruebas de contrato responsive, permisos y nombres accesibles. **Pendiente de comprobar en el proyecto local** con `npm run test && npm run typecheck && npm run build && npm run audit:release` y visualmente en 320 y 375 px; la inspección de marcado no demuestra el layout final del navegador.

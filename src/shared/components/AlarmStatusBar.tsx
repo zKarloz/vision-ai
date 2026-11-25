@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { BellOff, BellRing, ShieldAlert, Volume2, VolumeX } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { BellOff, BellRing, CheckCheck, ShieldAlert, Volume2, VolumeX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useIncidentCenter } from '../../app/providers/IncidentCenterProvider';
 import { useSharedHistory } from '../../app/providers/SharedHistoryProvider';
@@ -33,6 +34,49 @@ export function nextAlarmMotion(current: AlarmMotion, hasPending: boolean): Alar
  */
 export function shouldRenderAlarmView(view: AlarmView, pendingCount: number): boolean {
   return view === 'floating' ? pendingCount > 0 : pendingCount === 0;
+}
+
+/**
+ * Vista móvil compacta de las alarmas. Concentra la información crítica y
+ * mantiene las mismas acciones que la tarjeta de escritorio, con nombres
+ * accesibles para botones que muestran solo iconos.
+ */
+export function MobileAlarmNotice({
+  count, cameraId, zoneId, soundEnabled, mayAcknowledge, onAcknowledge, onToggleSound,
+}: {
+  count: number;
+  cameraId?: string;
+  zoneId?: string;
+  soundEnabled: boolean;
+  mayAcknowledge: boolean;
+  onAcknowledge: () => void;
+  onToggleSound: () => void;
+}) {
+  const summary = `${count} ${count === 1 ? 'alarma pendiente' : 'alarmas pendientes'}`;
+  return <div className="flex w-full min-w-0 items-center gap-1.5 sm:hidden" aria-label={summary}>
+    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--danger-bg)] text-[var(--danger)]">
+      <BellRing size={17} aria-hidden="true"/>
+    </span>
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-xs font-bold" title={summary}>{count} {count === 1 ? 'alarma' : 'alarmas'}</p>
+      <p className="truncate text-[11px] text-[var(--muted)]" title={cameraId && zoneId ? `${cameraId} · ${zoneId}` : 'Requiere atención'}>
+        {cameraId && zoneId ? `${cameraId} · ${zoneId}` : 'Requiere atención'}
+      </p>
+    </div>
+    {mayAcknowledge && <Button size="sm" variant="primary" className="h-9 w-9 shrink-0" style={{ padding: 0 }}
+      aria-label="Reconocer alarma" title="Reconocer alarma" onClick={onAcknowledge}>
+      <CheckCheck size={17} aria-hidden="true"/>
+    </Button>}
+    <Button size="sm" className="h-9 w-9 shrink-0" style={{ padding: 0 }}
+      aria-label={soundEnabled ? 'Silenciar audio' : 'Activar sonido'}
+      title={soundEnabled ? 'Silenciar audio' : 'Activar sonido'} onClick={onToggleSound}>
+      {soundEnabled ? <VolumeX size={17} aria-hidden="true"/> : <Volume2 size={17} aria-hidden="true"/>}
+    </Button>
+    <Link to="/incidentes" aria-label="Ver incidentes" title="Ver incidentes"
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] hover:bg-[var(--muted-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
+      <ShieldAlert size={17} aria-hidden="true"/>
+    </Link>
+  </div>;
 }
 
 export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }) {
@@ -102,23 +146,44 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
     } finally { setSaving(false); }
   }
 
-  const soundButton = <Button size="sm" className={isFloating ? 'min-w-0 w-full sm:w-auto' : undefined}
-    style={isFloating ? { whiteSpace: 'normal' } : undefined} onClick={() => {
+  // Ambas variantes (móvil/escritorio) comparten los manejadores de negocio.
+  function openAcknowledgeDialog() {
+    setSelectedId(pending[0]?.id ?? '');
+    setDialogOpen(true);
+    setFormError('');
+  }
+
+  function toggleSound() {
     if (soundEnabled) disableSound(); else void enableSound();
-  }}>
+  }
+
+  const soundButton = <Button size="sm" className={isFloating ? 'min-w-0 w-full sm:w-auto' : undefined}
+    style={isFloating ? { whiteSpace: 'normal' } : undefined} onClick={toggleSound}>
     {soundEnabled ? <VolumeX size={15}/> : <Volume2 size={15}/>}
     {soundEnabled ? 'Silenciar audio' : 'Activar sonido'}
   </Button>;
 
   return <>
-    {isFloating ? (
-      <div className="pointer-events-none fixed inset-x-2 top-[calc(74px_+_env(safe-area-inset-top))] z-[25] min-w-0 max-w-full sm:inset-x-auto sm:right-6 sm:top-[82px] sm:w-[360px]">
+    {isFloating ? (typeof document === 'undefined' ? null : createPortal(
+      // El portal elimina la alerta del árbol del layout 3D y evita que un
+      // contenedor transformado cambie el tamaño o el anclaje del flotante.
+      <div className="pointer-events-none fixed left-2 right-2 top-[calc(78px_+_env(safe-area-inset-top))] z-[25] w-auto min-w-0 max-w-[calc(100vw-1rem)] sm:left-auto sm:right-6 sm:top-[82px] sm:w-[360px] sm:max-w-[calc(100vw-3rem)]">
         <div role="status" aria-label="Alarma de monitoreo" aria-live="polite"
           aria-hidden={motion === 'exiting'}
           onAnimationEnd={event => { if (event.target === event.currentTarget) finishMotion(); }}
-          className={`max-h-[min(65dvh,440px)] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl border border-[var(--danger)] bg-[var(--card)] p-3 text-[var(--text)] shadow-2xl sm:p-4 ${motion === 'entering' ? 'alarm-float-enter pointer-events-auto' : motion === 'exiting' ? 'alarm-float-exit pointer-events-none' : 'pointer-events-auto'}`}>
+          className={`max-h-[min(24dvh,104px)] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl border border-[var(--danger)] bg-[var(--card)] p-2 text-[var(--text)] shadow-2xl sm:max-h-[min(65dvh,440px)] sm:p-4 ${motion === 'entering' ? 'alarm-float-enter pointer-events-auto' : motion === 'exiting' ? 'alarm-float-exit pointer-events-none' : 'pointer-events-auto'}`}>
 
-          <div className="flex min-w-0 items-start gap-2 sm:gap-3">
+          <MobileAlarmNotice
+            count={displayCount}
+            cameraId={displayPending.length === 1 ? displayPending[0].cameraId : undefined}
+            zoneId={displayPending.length === 1 ? displayPending[0].zoneId : undefined}
+            soundEnabled={soundEnabled}
+            mayAcknowledge={mayAcknowledge}
+            onAcknowledge={openAcknowledgeDialog}
+            onToggleSound={toggleSound}
+          />
+          {/* En escritorio conservamos la tarjeta detallada y sus acciones. */}
+          <div className="hidden min-w-0 items-start gap-3 sm:flex">
             <span className="shrink-0 rounded-xl bg-[var(--danger-bg)] p-2 text-[var(--danger)]"><BellRing size={19} aria-hidden="true"/></span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold">{displayCount === 1 ? '1 alarma pendiente' : `${displayCount} alarmas pendientes`}</p>
@@ -126,18 +191,16 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
               {displayPending.length === 1 && <p className="mt-1 truncate text-[11px] text-[var(--muted)]" title={`${displayPending[0].cameraId} · ${displayPending[0].zoneId}`}>{displayPending[0].cameraId} · {displayPending[0].zoneId}</p>}
             </div>
           </div>
-          {/* En móviles las acciones ocupan una cuadrícula, no ensanchan el viewport. */}
-          <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-            {mayAcknowledge && <Button size="sm" className="min-w-0 w-full sm:w-auto" style={{ whiteSpace: 'normal' }} variant="primary" onClick={() => {
-              setSelectedId(pending[0]?.id ?? ''); setDialogOpen(true); setFormError('');
-            }}>Reconocer</Button>}
+          {/* Los controles de texto completo quedan reservados para escritorio. */}
+          <div className="mt-3 hidden min-w-0 flex-wrap items-center gap-2 sm:flex">
+            {mayAcknowledge && <Button size="sm" className="min-w-0" variant="primary" onClick={openAcknowledgeDialog}>Reconocer</Button>}
             {soundButton}
-            <Link to="/incidentes" className="col-span-2 inline-flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-xl border border-[var(--border)] px-3 py-2 text-center text-xs font-semibold hover:bg-[var(--muted-bg)] sm:col-span-1"><ShieldAlert size={14} className="shrink-0"/> Ver incidentes</Link>
+            <Link to="/incidentes" className="inline-flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-xl border border-[var(--border)] px-3 py-2 text-center text-xs font-semibold hover:bg-[var(--muted-bg)]"><ShieldAlert size={14} className="shrink-0"/> Ver incidentes</Link>
           </div>
-          {soundError && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{soundError}</p>}
-          {!state.storageOk && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">El historial no se pudo guardar en este navegador.</p>}
+          {soundError && <p role="alert" title={soundError} className="mt-1 truncate text-[10px] text-[var(--danger)] sm:mt-2 sm:whitespace-normal sm:break-words sm:text-xs">{soundError}</p>}
+          {!state.storageOk && <p role="alert" className="mt-1 truncate text-[10px] text-[var(--danger)] sm:mt-2 sm:whitespace-normal sm:break-words sm:text-xs">El historial no se pudo guardar en este navegador.</p>}
         </div>
-      </div>
+      </div>, document.body)
     ) : (
       <section className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4" aria-label="Configuración de alarmas" role="status">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -151,8 +214,8 @@ export function AlarmStatusBar({ variant = 'settings' }: { variant?: AlarmView }
           {soundButton}
         </div>
         {!soundEnabled && <p className="mt-2 text-[11px] text-[var(--muted)]">Para escuchar la sirena, pulsa «Activar sonido». La alerta visual funciona sin audio.</p>}
-        {soundError && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{soundError}</p>}
-        {!state.storageOk && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">El historial no se pudo guardar en este navegador.</p>}
+        {soundError && <p role="alert" className="mt-2 break-words text-[11px] text-[var(--danger)] sm:text-xs">{soundError}</p>}
+        {!state.storageOk && <p role="alert" className="mt-2 break-words text-[11px] text-[var(--danger)] sm:text-xs">El historial no se pudo guardar en este navegador.</p>}
       </section>
     )}
     <Modal open={mayAcknowledge && dialogOpen && pendingCount > 0} onClose={() => setDialogOpen(false)} title="Reconocer alarma durante el monitoreo"
